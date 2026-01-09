@@ -1,432 +1,1445 @@
-{% extends "base.html" %}
-
-{% block title %}Alert MTL - Snow Removal & Waste Alerts{% endblock %}
-
-{% block content %}
-<div class="max-w-2xl mx-auto">
-    <!-- Hero Section -->
-    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4 text-center">
-            Check Your Street Status
-        </h2>
-
-        <!-- Geolocation Button -->
-        <button
-            id="geolocate-btn"
-            onclick="useMyLocation()"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg mb-4 flex items-center justify-center gap-2 transition"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            </svg>
-            <span id="geolocate-text">Use My Location</span>
-        </button>
-
-        <div class="flex items-center my-4">
-            <div class="flex-grow border-t border-gray-300"></div>
-            <span class="px-4 text-gray-500 text-sm">OR</span>
-            <div class="flex-grow border-t border-gray-300"></div>
-        </div>
-
-        <!-- Address Input -->
-        <div class="relative">
-            <input
-                type="text"
-                id="address-input"
-                placeholder="Enter your Montreal address..."
-                class="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                autocomplete="off"
-            >
-            <!-- Autocomplete dropdown -->
-            <div id="autocomplete-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 shadow-lg hidden max-h-60 overflow-y-auto">
-            </div>
-        </div>
-
-        <!-- Hidden fields for selected address -->
-        <input type="hidden" id="selected-cote-rue-id">
-        <input type="hidden" id="selected-lat">
-        <input type="hidden" id="selected-lon">
-
-        <!-- Check Status Button -->
-        <button
-            id="check-btn"
-            onclick="checkStatus()"
-            class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg mt-4 transition disabled:bg-gray-400"
-            disabled
-        >
-            Check Status
-        </button>
-    </div>
-
-    <!-- Status Display -->
-    <div id="status-container" class="hidden">
-        <!-- Loading State -->
-        <div id="loading-state" class="bg-white rounded-lg shadow-lg p-6 text-center hidden">
-            <div class="loading-spinner mx-auto mb-4"></div>
-            <p class="text-gray-600">Checking status...</p>
-        </div>
-
-        <!-- Error State -->
-        <div id="error-state" class="bg-red-50 border border-red-200 rounded-lg p-6 hidden">
-            <p class="text-red-700" id="error-message">An error occurred.</p>
-            <button onclick="checkStatus()" class="mt-4 text-red-600 hover:underline">Try again</button>
-        </div>
-
-        <!-- Results -->
-        <div id="results-state" class="space-y-4 hidden">
-            <!-- Address Header -->
-            <div class="bg-white rounded-lg shadow-lg p-4">
-                <p class="text-lg font-semibold text-gray-800" id="result-address"></p>
-                <p class="text-sm text-gray-500" id="result-borough"></p>
-            </div>
-
-            <!-- Snow Status Card -->
-            <div id="snow-status-card" class="bg-white rounded-lg shadow-lg overflow-hidden">
-                <div id="snow-status-header" class="p-4 text-white">
-                    <h3 class="font-semibold text-lg" id="snow-status-title">Snow Removal Status</h3>
-                </div>
-                <div class="p-4">
-                    <p class="text-gray-700 mb-2" id="snow-status-message"></p>
-                    <div id="snow-status-details" class="text-sm text-gray-600 space-y-1"></div>
-                </div>
-            </div>
-
-            <!-- Waste Schedule Card -->
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                <div class="bg-gray-700 p-4 text-white">
-                    <h3 class="font-semibold text-lg">Waste Collection Schedule</h3>
-                </div>
-                <div class="p-4" id="waste-schedule-content">
-                    <!-- Filled by JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Subscription Section -->
-    <div class="bg-white rounded-lg shadow-lg p-6 mt-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Get Email Alerts</h3>
-        <p class="text-gray-600 text-sm mb-4">
-            Receive notifications when snow removal is scheduled for your street, or reminders before waste collection.
-        </p>
-
-        <form id="subscribe-form" onsubmit="subscribe(event)">
-            <div class="flex gap-2">
-                <input
-                    type="email"
-                    id="email-input"
-                    placeholder="your@email.com"
-                    required
-                    class="flex-grow border border-gray-300 rounded-lg py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                <button
-                    type="submit"
-                    id="subscribe-btn"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition disabled:bg-gray-400"
-                    disabled
-                >
-                    Subscribe
-                </button>
-            </div>
-        </form>
-
-        <div id="subscribe-success" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p class="text-green-700">Successfully subscribed! Check your email for confirmation.</p>
-        </div>
-
-        <div id="subscribe-error" class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p class="text-red-700" id="subscribe-error-message"></p>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    let debounceTimer;
-    let selectedAddress = null;
-
-    // Geolocation
-    function useMyLocation() {
-        const btn = document.getElementById('geolocate-btn');
-        const text = document.getElementById('geolocate-text');
-
-        if (!navigator.geolocation) {
-            alert('Geolocation is not supported by your browser');
-            return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alert MTL - Montreal Snow & Waste Alerts</title>
+    <style>
+        :root {
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --text-tertiary: #6e6e73;
+            --bg-primary: #fbfbfd;
+            --bg-secondary: #f5f5f7;
+            --bg-elevated: #ffffff;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --success: #34c759;
+            --success-dark: #248a3d;
+            --error: #ff3b30;
+            --warning: #ff9500;
+            --snow-color: #5ac8fa;
+            --waste-color: #34c759;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
         }
 
-        text.textContent = 'Getting location...';
-        btn.disabled = true;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(180deg, #e8f4fc 0%, #e8f5e9 50%, var(--bg-primary) 100%);
+            padding: 80px 24px 60px;
+            text-align: center;
+        }
+
+        .hero-icon {
+            width: 88px;
+            height: 88px;
+            margin: 0 auto 24px;
+            background: linear-gradient(145deg, #ffffff 0%, #f0f5ff 100%);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
+            font-size: 44px;
+        }
+
+        .hero h1 {
+            font-size: 44px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-tertiary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 19px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 440px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 0 24px 80px;
+            max-width: 540px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-elevated);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .card + .card {
+            margin-top: 20px;
+        }
+
+        /* Quick Check Card */
+        .quick-check-card {
+            background: linear-gradient(135deg, #f0f7ff 0%, #f5fff5 100%);
+            border: 2px solid rgba(0, 113, 227, 0.15);
+        }
+
+        .quick-check-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .quick-check-header h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .quick-check-header p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Location Button */
+        .btn-location {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 24px;
+            background: var(--accent);
+            border: none;
+            color: white;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-location:hover {
+            background: var(--accent-hover);
+            transform: scale(1.01);
+        }
+
+        .btn-location:active {
+            transform: scale(0.99);
+        }
+
+        .btn-location:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-location svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Divider */
+        .location-divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .location-divider::before,
+        .location-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        .location-divider span {
+            padding: 0 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        input[type="email"],
+        input[type="text"] {
+            width: 100%;
+            padding: 16px 18px;
+            font-size: 17px;
+            font-family: inherit;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        input[type="email"]:hover,
+        input[type="text"]:hover {
+            border-color: rgba(0, 0, 0, 0.15);
+        }
+
+        input[type="email"]:focus,
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            background: var(--bg-elevated);
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Address Input Container */
+        .address-input-container {
+            position: relative;
+        }
+
+        /* Autocomplete Dropdown */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            margin-top: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .autocomplete-dropdown.visible {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .autocomplete-item {
+            padding: 14px 18px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .autocomplete-item-main {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .autocomplete-item-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px 24px;
+            font-size: 17px;
+            font-weight: 500;
+            font-family: inherit;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: scale(1.01);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.99);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--success-dark);
+            transform: scale(1.01);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: #ececee;
+        }
+
+        .btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Message */
+        .message {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.success {
+            display: block;
+            background: rgba(52, 199, 89, 0.1);
+            color: #248a3d;
+        }
+
+        .message.error {
+            display: block;
+            background: rgba(255, 59, 48, 0.1);
+            color: #d70015;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+            margin-top: 24px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .results-section.visible {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .results-header svg {
+            width: 22px;
+            height: 22px;
+            color: var(--accent);
+        }
+
+        .results-header-text {
+            flex: 1;
+        }
+
+        .results-header-address {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .results-header-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .results-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Result Cards */
+        .result-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            background: var(--bg-elevated);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+        }
+
+        .result-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .result-card.snow .result-card-icon {
+            background: rgba(90, 200, 250, 0.15);
+        }
+
+        .result-card.waste .result-card-icon {
+            background: rgba(52, 199, 89, 0.15);
+        }
+
+        .result-card-content {
+            flex: 1;
+        }
+
+        .result-card-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .result-card-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .result-card-details {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .result-card-status {
+            font-size: 13px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .result-card-status.clear {
+            background: rgba(52, 199, 89, 0.1);
+            color: #248a3d;
+        }
+
+        .result-card-status.scheduled {
+            background: rgba(255, 149, 0, 0.1);
+            color: #c93400;
+        }
+
+        .result-card-status.active {
+            background: rgba(255, 59, 48, 0.1);
+            color: #d70015;
+        }
+
+        .result-card-status.done {
+            background: rgba(90, 200, 250, 0.1);
+            color: #0071e3;
+        }
+
+        /* Subscribe CTA */
+        .subscribe-cta {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .subscribe-cta p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 14px;
+        }
+
+        /* Section Divider */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 28px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        /* Alert Type Cards */
+        .alert-types {
+            margin-bottom: 24px;
+        }
+
+        .alert-types-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .alert-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .alert-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .alert-card:hover {
+            background: #eeeeef;
+        }
+
+        .alert-card.selected {
+            background: var(--bg-elevated);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+        }
+
+        .alert-card.selected.snow {
+            border-color: var(--snow-color);
+            box-shadow: 0 0 0 3px rgba(90, 200, 250, 0.15);
+        }
+
+        .alert-card.selected.waste {
+            border-color: var(--waste-color);
+            box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.15);
+        }
+
+        .alert-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .alert-card.snow .alert-card-icon {
+            background: rgba(90, 200, 250, 0.15);
+        }
+
+        .alert-card.waste .alert-card-icon {
+            background: rgba(52, 199, 89, 0.15);
+        }
+
+        .alert-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .alert-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .alert-card-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .alert-card-toggle {
+            width: 50px;
+            height: 30px;
+            background: #e5e5ea;
+            border-radius: 15px;
+            position: relative;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .alert-card-toggle::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .alert-card.selected .alert-card-toggle {
+            background: var(--accent);
+        }
+
+        .alert-card.selected.snow .alert-card-toggle {
+            background: var(--snow-color);
+        }
+
+        .alert-card.selected.waste .alert-card-toggle {
+            background: var(--waste-color);
+        }
+
+        .alert-card.selected .alert-card-toggle::after {
+            left: 22px;
+        }
+
+        .alert-card input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Info Section */
+        .info-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .info-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .info-title svg {
+            width: 18px;
+            height: 18px;
+            color: var(--accent);
+        }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            padding: 8px 0;
+        }
+
+        .info-list li svg {
+            width: 18px;
+            height: 18px;
+            color: var(--success);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Secondary Card */
+        .card-secondary {
+            background: var(--bg-secondary);
+            border: none;
+            box-shadow: none;
+        }
+
+        .card-secondary h3 {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .card-secondary input {
+            background: var(--bg-elevated);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Loading animation */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 540px) {
+            .hero {
+                padding: 60px 20px 40px;
+            }
+
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .hero p {
+                font-size: 17px;
+            }
+
+            .main {
+                padding: 0 16px 60px;
+            }
+
+            .card {
+                padding: 24px;
+                border-radius: 16px;
+            }
+
+            .alert-card {
+                padding: 14px;
+                gap: 12px;
+            }
+
+            .alert-card-icon {
+                width: 42px;
+                height: 42px;
+                font-size: 20px;
+            }
+
+            .alert-card-title {
+                font-size: 15px;
+            }
+
+            .alert-card-desc {
+                font-size: 13px;
+            }
+
+            .alert-card-toggle {
+                width: 44px;
+                height: 26px;
+            }
+
+            .alert-card-toggle::after {
+                width: 22px;
+                height: 22px;
+            }
+
+            .alert-card.selected .alert-card-toggle::after {
+                left: 20px;
+            }
+        }
+
+        /* Hidden utility */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Hero -->
+        <header class="hero">
+            <div class="hero-icon">
+                <span>🏙️</span>
+            </div>
+            <h1>Alert MTL</h1>
+            <p>Get notified about snow removal and waste collection for your Montreal address.</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Quick Check Card -->
+            <div class="card quick-check-card">
+                <div class="quick-check-header">
+                    <h2>Quick Check</h2>
+                    <p>Check your street status without subscribing</p>
+                </div>
+
+                <!-- Geolocation Button -->
+                <button type="button" id="geolocateBtn" class="btn-location">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        <line x1="12" y1="2" x2="12" y2="4"/>
+                        <line x1="12" y1="20" x2="12" y2="22"/>
+                        <line x1="2" y1="12" x2="4" y2="12"/>
+                        <line x1="20" y1="12" x2="22" y2="12"/>
+                    </svg>
+                    <span id="geolocateBtnText">Use My Location</span>
+                </button>
+
+                <div class="location-divider"><span>or</span></div>
+
+                <!-- Address Input -->
+                <div class="address-input-container">
+                    <input
+                        type="text"
+                        id="addressInput"
+                        placeholder="Enter your Montreal address..."
+                        autocomplete="off"
+                    >
+                    <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+                </div>
+
+                <!-- Hidden fields -->
+                <input type="hidden" id="selectedCoteRueId">
+                <input type="hidden" id="selectedLat">
+                <input type="hidden" id="selectedLon">
+
+                <!-- Check Button -->
+                <button type="button" id="checkBtn" class="btn btn-primary" style="margin-top: 16px;" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    Check Status
+                </button>
+
+                <div id="checkMessage" class="message"></div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="results-section">
+                    <div class="results-header">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <div class="results-header-text">
+                            <div id="resultsAddress" class="results-header-address"></div>
+                            <div id="resultsBorough" class="results-header-sub"></div>
+                        </div>
+                    </div>
+                    <div id="resultsGrid" class="results-grid"></div>
+
+                    <!-- Subscribe CTA -->
+                    <div class="subscribe-cta">
+                        <p>Want to receive automatic notifications?</p>
+                        <button type="button" id="subscribeCta" class="btn btn-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                            Get Notified Automatically
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-divider">or subscribe for alerts</div>
+
+            <!-- Subscribe Card -->
+            <div class="card">
+                <form id="subscribeForm">
+                    <div class="form-group">
+                        <label for="subscribeAddress">Your Address</label>
+                        <div class="address-input-container">
+                            <input
+                                type="text"
+                                id="subscribeAddress"
+                                placeholder="Enter your Montreal address..."
+                                autocomplete="off"
+                                required
+                            >
+                            <div id="subscribeAutocomplete" class="autocomplete-dropdown"></div>
+                        </div>
+                        <input type="hidden" id="subscribeCoteRueId">
+                        <input type="hidden" id="subscribeLat">
+                        <input type="hidden" id="subscribeLon">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <!-- Alert Type Selection -->
+                    <div class="alert-types">
+                        <span class="alert-types-label">Choose Your Alerts</span>
+                        <div class="alert-cards">
+                            <!-- Snow Alert Card -->
+                            <label class="alert-card snow selected">
+                                <input type="checkbox" id="snowAlerts" name="snow_alerts" checked>
+                                <div class="alert-card-icon">❄️</div>
+                                <div class="alert-card-content">
+                                    <div class="alert-card-title">Snow Removal</div>
+                                    <div class="alert-card-desc">Get notified when snow removal is scheduled or in progress on your street</div>
+                                </div>
+                                <div class="alert-card-toggle"></div>
+                            </label>
+
+                            <!-- Waste Alert Card -->
+                            <label class="alert-card waste">
+                                <input type="checkbox" id="wasteAlerts" name="waste_alerts">
+                                <div class="alert-card-icon">🗑️</div>
+                                <div class="alert-card-content">
+                                    <div class="alert-card-title">Waste Collection</div>
+                                    <div class="alert-card-desc">Day-before reminder at 6 PM for garbage and recycling pickup</div>
+                                </div>
+                                <div class="alert-card-toggle"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="subscribeBtn" class="btn btn-primary" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        Subscribe to Alerts
+                    </button>
+                </form>
+
+                <div id="subscribeMessage" class="message"></div>
+
+                <div class="info-section">
+                    <div class="info-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        How it works
+                    </div>
+                    <ul class="info-list">
+                        <li>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Snow removal alerts are sent when operations are scheduled for your street
+                        </li>
+                        <li>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Waste collection reminders are sent the day before at 6:00 PM
+                        </li>
+                        <li>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Unsubscribe anytime with one click from any email
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Unsubscribe Card -->
+            <div class="card card-secondary">
+                <h3>Already subscribed?</h3>
+                <form id="unsubscribeForm">
+                    <input
+                        type="email"
+                        id="unsubEmail"
+                        name="email"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required
+                        style="margin-bottom: 12px;"
+                    >
+                    <button type="submit" class="btn btn-secondary">Unsubscribe from All Alerts</button>
+                </form>
+                <div id="unsubscribeMessage" class="message"></div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>A service for Montreal residents. Data from <a href="https://donnees.montreal.ca" target="_blank">Ville de Montréal</a>.</p>
+        </footer>
+    </div>
+
+    <script>
+        let debounceTimer;
+        let selectedAddress = null;
+        let subscribeSelectedAddress = null;
+
+        // Geolocation
+        document.getElementById('geolocateBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('geolocateBtn');
+            const btnText = document.getElementById('geolocateBtnText');
+
+            if (!navigator.geolocation) {
+                showMessage('checkMessage', 'Geolocation is not supported by your browser', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.textContent = 'Getting location...';
+
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
+                    });
+                });
+
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
 
-                document.getElementById('selected-lat').value = lat;
-                document.getElementById('selected-lon').value = lon;
+                btnText.textContent = 'Finding address...';
 
-                // Reverse geocode
-                try {
-                    const response = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`);
-                    const data = await response.json();
-
-                    if (data.cote_rue_id) {
-                        document.getElementById('selected-cote-rue-id').value = data.cote_rue_id;
-                        document.getElementById('address-input').value = `${data.civic_number} ${data.street_type || ''} ${data.street_name}`.trim();
-                        selectedAddress = data;
-                        enableButtons();
-                    } else {
-                        alert('Could not find your address. Please enter it manually.');
-                    }
-                } catch (e) {
-                    console.error(e);
-                    alert('Error getting address. Please enter it manually.');
-                }
-
-                text.textContent = 'Use My Location';
-                btn.disabled = false;
-            },
-            (error) => {
-                text.textContent = 'Use My Location';
-                btn.disabled = false;
-
-                if (error.code === error.PERMISSION_DENIED) {
-                    alert('Location access denied. Please enable location permissions or enter your address manually.');
-                } else {
-                    alert('Error getting location. Please enter your address manually.');
-                }
-            }
-        );
-    }
-
-    // Address autocomplete
-    document.getElementById('address-input').addEventListener('input', function(e) {
-        clearTimeout(debounceTimer);
-        const query = e.target.value.trim();
-
-        if (query.length < 3) {
-            document.getElementById('autocomplete-results').classList.add('hidden');
-            return;
-        }
-
-        debounceTimer = setTimeout(async () => {
-            try {
-                const response = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`);
                 const data = await response.json();
-                showAutocompleteResults(data.results || []);
-            } catch (e) {
-                console.error('Autocomplete error:', e);
-            }
-        }, 300);
-    });
 
-    function showAutocompleteResults(results) {
-        const container = document.getElementById('autocomplete-results');
+                if (data.cote_rue_id) {
+                    document.getElementById('selectedCoteRueId').value = data.cote_rue_id;
+                    document.getElementById('selectedLat').value = lat;
+                    document.getElementById('selectedLon').value = lon;
+                    document.getElementById('addressInput').value =
+                        `${data.civic_number || ''} ${data.street_type || ''} ${data.street_name}`.trim();
+                    selectedAddress = data;
+                    document.getElementById('checkBtn').disabled = false;
 
-        if (results.length === 0) {
-            container.classList.add('hidden');
-            return;
-        }
-
-        container.innerHTML = results.map(r => `
-            <div
-                class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                onclick="selectAddress(${JSON.stringify(r).replace(/"/g, '&quot;')})"
-            >
-                <p class="font-medium">${r.display}</p>
-                <p class="text-sm text-gray-500">${r.address_range} (${r.cote})</p>
-            </div>
-        `).join('');
-
-        container.classList.remove('hidden');
-    }
-
-    function selectAddress(address) {
-        document.getElementById('address-input').value = address.display;
-        document.getElementById('selected-cote-rue-id').value = address.cote_rue_id;
-        document.getElementById('autocomplete-results').classList.add('hidden');
-        selectedAddress = address;
-        enableButtons();
-    }
-
-    function enableButtons() {
-        document.getElementById('check-btn').disabled = false;
-        document.getElementById('subscribe-btn').disabled = false;
-    }
-
-    // Hide autocomplete when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('#address-input') && !e.target.closest('#autocomplete-results')) {
-            document.getElementById('autocomplete-results').classList.add('hidden');
-        }
-    });
-
-    // Check status
-    async function checkStatus() {
-        const coteRueId = document.getElementById('selected-cote-rue-id').value;
-        const lat = document.getElementById('selected-lat').value;
-        const lon = document.getElementById('selected-lon').value;
-
-        if (!coteRueId) {
-            alert('Please select an address first');
-            return;
-        }
-
-        // Show loading
-        document.getElementById('status-container').classList.remove('hidden');
-        document.getElementById('loading-state').classList.remove('hidden');
-        document.getElementById('error-state').classList.add('hidden');
-        document.getElementById('results-state').classList.add('hidden');
-
-        try {
-            // Fetch snow status
-            const snowResponse = await fetch(`/api/snow-status?cote_rue_id=${coteRueId}`);
-            const snowData = await snowResponse.json();
-
-            // Fetch waste schedule (if we have coordinates)
-            let wasteData = null;
-            if (lat && lon) {
-                const wasteResponse = await fetch(`/api/waste-schedule?lat=${lat}&lon=${lon}`);
-                if (wasteResponse.ok) {
-                    wasteData = await wasteResponse.json();
+                    // Auto-check status
+                    checkStatus();
+                } else {
+                    showMessage('checkMessage', 'Could not find your address. Please enter it manually.', 'error');
+                }
+            } catch (error) {
+                if (error.code === 1) {
+                    showMessage('checkMessage', 'Location access denied. Please enable permissions or enter your address.', 'error');
+                } else {
+                    showMessage('checkMessage', 'Error getting location. Please enter your address manually.', 'error');
                 }
             }
 
-            // Hide loading, show results
-            document.getElementById('loading-state').classList.add('hidden');
-            document.getElementById('results-state').classList.remove('hidden');
+            btn.disabled = false;
+            btnText.textContent = 'Use My Location';
+        });
 
-            // Display results
-            displaySnowStatus(snowData);
-            displayWasteSchedule(wasteData);
+        // Address autocomplete for quick check
+        setupAutocomplete('addressInput', 'autocompleteDropdown', (address) => {
+            selectedAddress = address;
+            document.getElementById('selectedCoteRueId').value = address.cote_rue_id;
+            document.getElementById('checkBtn').disabled = false;
+        });
 
-            // Update address display
-            if (selectedAddress) {
-                document.getElementById('result-address').textContent =
-                    `${selectedAddress.civic_number || ''} ${selectedAddress.street_type || ''} ${selectedAddress.street_name}`.trim();
-                document.getElementById('result-borough').textContent = selectedAddress.borough || 'Montreal';
-            }
+        // Address autocomplete for subscribe form
+        setupAutocomplete('subscribeAddress', 'subscribeAutocomplete', (address) => {
+            subscribeSelectedAddress = address;
+            document.getElementById('subscribeCoteRueId').value = address.cote_rue_id;
+            updateSubscribeButton();
+        });
 
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById('loading-state').classList.add('hidden');
-            document.getElementById('error-state').classList.remove('hidden');
-            document.getElementById('error-message').textContent = 'Failed to load status. Please try again.';
-        }
-    }
+        function setupAutocomplete(inputId, dropdownId, onSelect) {
+            const input = document.getElementById(inputId);
+            const dropdown = document.getElementById(dropdownId);
 
-    function displaySnowStatus(data) {
-        const header = document.getElementById('snow-status-header');
-        const title = document.getElementById('snow-status-title');
-        const message = document.getElementById('snow-status-message');
-        const details = document.getElementById('snow-status-details');
+            input.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                const query = e.target.value.trim();
 
-        const status = data.status || {};
-        const display = status.display || {};
+                if (query.length < 3) {
+                    dropdown.classList.remove('visible');
+                    return;
+                }
 
-        // Set color
-        header.className = `p-4 text-white status-${display.color || 'gray'}`;
-
-        // Set title
-        title.textContent = display.en || 'Unknown Status';
-
-        // Set message
-        message.textContent = status.message || 'No information available';
-
-        // Set details
-        let detailsHtml = '';
-        if (status.scheduled_start) {
-            detailsHtml += `<p><strong>Starts:</strong> ${new Date(status.scheduled_start).toLocaleString()}</p>`;
-        }
-        if (status.scheduled_end) {
-            detailsHtml += `<p><strong>Ends:</strong> ${new Date(status.scheduled_end).toLocaleString()}</p>`;
-        }
-        detailsHtml += `<p><strong>Parking:</strong> ${status.parking_allowed ? 'Allowed' : 'Prohibited'}</p>`;
-        details.innerHTML = detailsHtml;
-    }
-
-    function displayWasteSchedule(data) {
-        const container = document.getElementById('waste-schedule-content');
-
-        if (!data) {
-            container.innerHTML = '<p class="text-gray-500">Enter coordinates to see waste schedule</p>';
-            return;
-        }
-
-        let html = '<div class="space-y-2">';
-
-        for (const [type, schedule] of Object.entries(data)) {
-            html += `
-                <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="font-medium">${schedule.name}</span>
-                    <span class="text-gray-600">${schedule.next_collection_display || schedule.day_of_week}</span>
-                </div>
-            `;
-        }
-
-        html += '</div>';
-        container.innerHTML = html;
-    }
-
-    // Subscribe
-    async function subscribe(e) {
-        e.preventDefault();
-
-        const email = document.getElementById('email-input').value;
-        const coteRueId = document.getElementById('selected-cote-rue-id').value;
-
-        if (!coteRueId) {
-            alert('Please select an address first');
-            return;
-        }
-
-        const btn = document.getElementById('subscribe-btn');
-        btn.disabled = true;
-        btn.textContent = 'Subscribing...';
-
-        try {
-            const response = await fetch('/api/subscribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    email: email,
-                    cote_rue_id: parseInt(coteRueId),
-                    address: {
-                        street_name: selectedAddress?.street_name,
-                        street_type: selectedAddress?.street_type,
-                        civic_number: selectedAddress?.civic_number,
-                        cote: selectedAddress?.cote,
-                        borough: selectedAddress?.borough,
-                        latitude: parseFloat(document.getElementById('selected-lat').value) || null,
-                        longitude: parseFloat(document.getElementById('selected-lon').value) || null
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        const response = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`);
+                        const data = await response.json();
+                        showAutocompleteResults(dropdown, data.results || [], onSelect, input);
+                    } catch (e) {
+                        console.error('Autocomplete error:', e);
                     }
-                })
+                }, 300);
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                document.getElementById('subscribe-success').classList.remove('hidden');
-                document.getElementById('subscribe-error').classList.add('hidden');
-            } else {
-                document.getElementById('subscribe-error').classList.remove('hidden');
-                document.getElementById('subscribe-error-message').textContent = data.error || 'Subscription failed';
-                document.getElementById('subscribe-success').classList.add('hidden');
-            }
-
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById('subscribe-error').classList.remove('hidden');
-            document.getElementById('subscribe-error-message').textContent = 'Network error. Please try again.';
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest(`#${inputId}`) && !e.target.closest(`#${dropdownId}`)) {
+                    dropdown.classList.remove('visible');
+                }
+            });
         }
 
-        btn.disabled = false;
-        btn.textContent = 'Subscribe';
-    }
-</script>
-{% endblock %}
+        function showAutocompleteResults(dropdown, results, onSelect, input) {
+            if (results.length === 0) {
+                dropdown.classList.remove('visible');
+                return;
+            }
+
+            dropdown.innerHTML = results.map((r, i) => `
+                <div class="autocomplete-item" data-index="${i}">
+                    <div class="autocomplete-item-main">${r.display}</div>
+                    <div class="autocomplete-item-sub">${r.address_range} (${r.cote})</div>
+                </div>
+            `).join('');
+
+            dropdown.querySelectorAll('.autocomplete-item').forEach((item, i) => {
+                item.addEventListener('click', () => {
+                    const address = results[i];
+                    input.value = address.display;
+                    dropdown.classList.remove('visible');
+                    onSelect(address);
+                });
+            });
+
+            dropdown.classList.add('visible');
+        }
+
+        // Check status
+        document.getElementById('checkBtn').addEventListener('click', checkStatus);
+
+        async function checkStatus() {
+            const coteRueId = document.getElementById('selectedCoteRueId').value;
+            const lat = document.getElementById('selectedLat').value;
+            const lon = document.getElementById('selectedLon').value;
+
+            if (!coteRueId) {
+                showMessage('checkMessage', 'Please select an address first', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('checkBtn');
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+            document.getElementById('resultsSection').classList.remove('visible');
+            document.getElementById('checkMessage').className = 'message';
+
+            try {
+                // Fetch snow status
+                const snowResponse = await fetch(`/api/snow-status?cote_rue_id=${coteRueId}`);
+                const snowData = await snowResponse.json();
+
+                // Fetch waste schedule if we have coordinates
+                let wasteData = null;
+                if (lat && lon) {
+                    const wasteResponse = await fetch(`/api/waste-schedule?lat=${lat}&lon=${lon}`);
+                    if (wasteResponse.ok) {
+                        wasteData = await wasteResponse.json();
+                    }
+                }
+
+                displayResults(snowData, wasteData);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('checkMessage', 'Failed to load status. Please try again.', 'error');
+            }
+
+            btn.disabled = false;
+            btn.classList.remove('btn-loading');
+        }
+
+        function displayResults(snowData, wasteData) {
+            const section = document.getElementById('resultsSection');
+            const grid = document.getElementById('resultsGrid');
+
+            // Update header
+            if (selectedAddress) {
+                document.getElementById('resultsAddress').textContent =
+                    `${selectedAddress.civic_number || ''} ${selectedAddress.street_type || ''} ${selectedAddress.street_name}`.trim();
+                document.getElementById('resultsBorough').textContent = selectedAddress.borough || 'Montreal';
+            }
+
+            grid.innerHTML = '';
+
+            // Snow status card
+            const status = snowData.status || {};
+            const display = status.display || {};
+            let statusClass = 'clear';
+            let statusText = 'Clear';
+
+            if (status.etat_deneig === 1 || status.etat_deneig === 2) {
+                statusClass = 'scheduled';
+                statusText = 'Scheduled';
+            } else if (status.etat_deneig === 3) {
+                statusClass = 'active';
+                statusText = 'In Progress';
+            } else if (status.etat_deneig === 4) {
+                statusClass = 'done';
+                statusText = 'Completed';
+            }
+
+            const snowCard = document.createElement('div');
+            snowCard.className = 'result-card snow';
+            snowCard.innerHTML = `
+                <div class="result-card-icon">❄️</div>
+                <div class="result-card-content">
+                    <div class="result-card-label">Snow Removal</div>
+                    <div class="result-card-value">${display.en || 'No operation scheduled'}</div>
+                    ${status.scheduled_start ? `<div class="result-card-details">Starts: ${new Date(status.scheduled_start).toLocaleString()}</div>` : ''}
+                </div>
+                <span class="result-card-status ${statusClass}">${statusText}</span>
+            `;
+            grid.appendChild(snowCard);
+
+            // Waste schedule cards
+            if (wasteData) {
+                for (const [type, schedule] of Object.entries(wasteData)) {
+                    const wasteCard = document.createElement('div');
+                    wasteCard.className = 'result-card waste';
+                    wasteCard.innerHTML = `
+                        <div class="result-card-icon">${type === 'garbage' ? '🗑️' : '♻️'}</div>
+                        <div class="result-card-content">
+                            <div class="result-card-label">${schedule.name}</div>
+                            <div class="result-card-value">${schedule.next_collection_display || schedule.day_of_week || 'Not available'}</div>
+                        </div>
+                    `;
+                    grid.appendChild(wasteCard);
+                }
+            }
+
+            section.classList.add('visible');
+        }
+
+        // Toggle alert card selection
+        document.querySelectorAll('.alert-card input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const card = e.target.closest('.alert-card');
+                card.classList.toggle('selected', e.target.checked);
+            });
+        });
+
+        // Email input validation
+        document.getElementById('email').addEventListener('input', updateSubscribeButton);
+
+        function updateSubscribeButton() {
+            const hasAddress = document.getElementById('subscribeCoteRueId').value;
+            const hasEmail = document.getElementById('email').value.includes('@');
+            document.getElementById('subscribeBtn').disabled = !hasAddress || !hasEmail;
+        }
+
+        // Subscribe CTA
+        document.getElementById('subscribeCta').addEventListener('click', () => {
+            // Copy address to subscribe form
+            if (selectedAddress) {
+                document.getElementById('subscribeAddress').value =
+                    `${selectedAddress.civic_number || ''} ${selectedAddress.street_type || ''} ${selectedAddress.street_name}`.trim();
+                document.getElementById('subscribeCoteRueId').value = selectedAddress.cote_rue_id;
+                document.getElementById('subscribeLat').value = document.getElementById('selectedLat').value;
+                document.getElementById('subscribeLon').value = document.getElementById('selectedLon').value;
+                subscribeSelectedAddress = selectedAddress;
+            }
+
+            // Scroll to subscribe form
+            document.getElementById('subscribeForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Focus email after scroll
+            setTimeout(() => {
+                document.getElementById('email').focus();
+                updateSubscribeButton();
+            }, 500);
+        });
+
+        // Subscribe form
+        document.getElementById('subscribeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('subscribeBtn');
+            const msg = document.getElementById('subscribeMessage');
+
+            // Validate at least one alert type
+            const snowChecked = document.getElementById('snowAlerts').checked;
+            const wasteChecked = document.getElementById('wasteAlerts').checked;
+
+            if (!snowChecked && !wasteChecked) {
+                showMessage('subscribeMessage', 'Please select at least one alert type.', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+            msg.className = 'message';
+
+            try {
+                const response = await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        cote_rue_id: parseInt(document.getElementById('subscribeCoteRueId').value),
+                        address: {
+                            street_name: subscribeSelectedAddress?.street_name,
+                            street_type: subscribeSelectedAddress?.street_type,
+                            civic_number: subscribeSelectedAddress?.civic_number,
+                            cote: subscribeSelectedAddress?.cote,
+                            borough: subscribeSelectedAddress?.borough,
+                            latitude: parseFloat(document.getElementById('subscribeLat').value) || null,
+                            longitude: parseFloat(document.getElementById('subscribeLon').value) || null
+                        },
+                        snow_alerts: snowChecked,
+                        waste_alerts: wasteChecked
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('subscribeMessage', 'Successfully subscribed! Check your email for confirmation.', 'success');
+                    document.getElementById('subscribeForm').reset();
+                    document.getElementById('subscribeCoteRueId').value = '';
+                    subscribeSelectedAddress = null;
+                    updateSubscribeButton();
+                } else {
+                    showMessage('subscribeMessage', data.error || 'Subscription failed. Please try again.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('subscribeMessage', 'Network error. Please try again.', 'error');
+            }
+
+            btn.disabled = false;
+            btn.classList.remove('btn-loading');
+        });
+
+        // Unsubscribe form
+        document.getElementById('unsubscribeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('unsubEmail').value;
+
+            try {
+                const response = await fetch('/api/unsubscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('unsubscribeMessage', 'You have been unsubscribed from all alerts.', 'success');
+                    document.getElementById('unsubscribeForm').reset();
+                } else {
+                    showMessage('unsubscribeMessage', data.error || 'Unsubscribe failed. Please try again.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('unsubscribeMessage', 'Network error. Please try again.', 'error');
+            }
+        });
+
+        function showMessage(elementId, text, type) {
+            const el = document.getElementById(elementId);
+            el.textContent = text;
+            el.className = `message ${type}`;
+        }
+    </script>
+</body>
+</html>
