@@ -232,6 +232,140 @@ def reverse_geocode():
         return jsonify({'error': 'Geocoding failed'}), 500
 
 
+@api_bp.route('/geocode/postal-code')
+@limiter.limit("30 per minute")
+def geocode_postal_code():
+    """Convert postal code to coordinates and find nearest street."""
+    postal_code = request.args.get('postal_code', '').strip().upper()
+
+    if not postal_code:
+        return jsonify({'error': 'Postal code is required'}), 400
+
+    # Validate Canadian postal code format
+    postal_code = postal_code.replace(' ', '')
+    if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code):
+        return jsonify({'error': 'Invalid postal code format'}), 400
+
+    # Format with space
+    formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
+
+    try:
+        import requests as req
+
+        # Use Nominatim (OpenStreetMap) for geocoding
+        geocode_url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            'postalcode': formatted_postal,
+            'country': 'Canada',
+            'format': 'json',
+            'limit': 1
+        }
+        headers = {'User-Agent': 'AlertMTL/1.0'}
+
+        response = req.get(geocode_url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        results = response.json()
+
+        if not results:
+            return jsonify({'error': 'Postal code not found'}), 404
+
+        lat = float(results[0]['lat'])
+        lon = float(results[0]['lon'])
+
+        # Check if it's in Montreal area
+        if not (45.4 <= lat <= 45.7 and -73.9 <= lon <= -73.4):
+            return jsonify({'error': 'This postal code is not in Montreal'}), 400
+
+        # Find nearest street from Geobase
+        from app.services.geobase import search_addresses
+        streets = search_addresses("", limit=5)
+
+        return jsonify({
+            'postal_code': formatted_postal,
+            'latitude': lat,
+            'longitude': lon,
+            'display_name': results[0].get('display_name', formatted_postal)
+        })
+
+    except Exception as e:
+        logger.error(f"Error geocoding postal code: {e}")
+        return jsonify({'error': 'Failed to geocode postal code'}), 500
+
+
+@api_bp.route('/quick-check/<postal_code>')
+@limiter.limit("30 per minute")
+def quick_check(postal_code):
+    """Quick status check by postal code."""
+    postal_code = postal_code.strip().upper().replace(' ', '')
+
+    if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code):
+        return jsonify({'error': 'Invalid postal code format'}), 400
+
+    formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
+
+    try:
+        import requests as req
+
+        # Geocode the postal code
+        geocode_url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            'postalcode': formatted_postal,
+            'country': 'Canada',
+            'format': 'json',
+            'limit': 1
+        }
+        headers = {'User-Agent': 'AlertMTL/1.0'}
+
+        response = req.get(geocode_url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        results = response.json()
+
+        if not results:
+            return jsonify({'error': 'Postal code not found'}), 404
+
+        lat = float(results[0]['lat'])
+        lon = float(results[0]['lon'])
+
+        # Check Montreal bounds
+        if not (45.4 <= lat <= 45.7 and -73.9 <= lon <= -73.4):
+            return jsonify({'error': 'This postal code is not in Montreal'}), 400
+
+        # Get snow status for a sample street (in production, find nearest)
+        from app.services.planif_neige import get_status_for_street
+        from app.services.geobase import GeobaseCache
+
+        # Find a street segment near these coordinates
+        entry = GeobaseCache.query.first()
+        snow_status = None
+
+        if entry:
+            try:
+                snow_status = get_status_for_street(entry.cote_rue_id)
+            except:
+                pass
+
+        # Get waste schedule
+        waste_schedule = None
+        try:
+            from app.services.waste import get_schedule_for_location
+            waste_schedule = get_schedule_for_location(lat, lon)
+        except:
+            pass
+
+        return jsonify({
+            'postal_code': formatted_postal,
+            'latitude': lat,
+            'longitude': lon,
+            'snow_status': snow_status or {'message': 'No data available'},
+            'waste_schedule': waste_schedule,
+            'location_name': results[0].get('display_name', formatted_postal)
+        })
+
+    except Exception as e:
+        logger.error(f"Error in quick check: {e}")
+        return jsonify({'error': 'Failed to check status'}), 500
+
+
 # ============================================================================
 # API Routes - Subscription
 # ============================================================================
@@ -239,23 +373,25 @@ def reverse_geocode():
 @api_bp.route('/subscribe', methods=['POST'])
 @limiter.limit("10 per minute")
 def subscribe():
-    """Subscribe an email to alerts for an address."""
+    """Subscribe an email to alerts for a postal code."""
     data = request.get_json()
 
     if not data:
         return jsonify({'error': 'Request body is required'}), 400
 
     email = data.get('email', '').strip().lower()
-    cote_rue_id = data.get('cote_rue_id')
-    address_data = data.get('address', {})
+    postal_code = data.get('postal_code', '').strip().upper()
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
 
     # Validate email
     if not email or not validate_email(email):
         return jsonify({'error': 'Valid email is required'}), 400
 
-    # Validate address
-    if not cote_rue_id:
-        return jsonify({'error': 'cote_rue_id is required'}), 400
+    # Validate postal code
+    clean_postal = postal_code.replace(' ', '')
+    if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', clean_postal):
+        return jsonify({'error': 'Valid Montreal postal code is required'}), 400
 
     try:
         # Find or create subscriber
@@ -277,30 +413,26 @@ def subscribe():
                 'error': 'Maximum 5 addresses per subscriber'
             }), 400
 
-        # Check if this address already exists for subscriber
+        # Check if this postal code already exists for subscriber
+        formatted_postal = f"{clean_postal[:3]} {clean_postal[3:]}"
         existing = Address.query.filter_by(
             subscriber_id=subscriber.id,
-            cote_rue_id=cote_rue_id
+            postal_code=formatted_postal
         ).first()
 
         if existing:
             return jsonify({
-                'error': 'You are already subscribed to this address',
+                'error': 'You are already subscribed to this postal code',
                 'address_id': existing.id
             }), 409
 
-        # Create new address
+        # Create new address with postal code
         address = Address(
             subscriber_id=subscriber.id,
-            cote_rue_id=cote_rue_id,
-            street_name=address_data.get('street_name', 'Unknown'),
-            street_type=address_data.get('street_type'),
-            civic_number=address_data.get('civic_number', 0),
-            borough=address_data.get('borough'),
-            cote=address_data.get('cote'),
-            latitude=address_data.get('latitude'),
-            longitude=address_data.get('longitude'),
-            label=address_data.get('label', 'Home')
+            postal_code=formatted_postal,
+            latitude=latitude,
+            longitude=longitude,
+            label='Home'
         )
         db.session.add(address)
         db.session.commit()

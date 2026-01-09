@@ -132,68 +132,6 @@
             color: var(--text-secondary);
         }
 
-        /* Location Button */
-        .btn-location {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 16px 24px;
-            background: var(--accent);
-            border: none;
-            color: white;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-location:hover {
-            background: var(--accent-hover);
-            transform: scale(1.01);
-        }
-
-        .btn-location:active {
-            transform: scale(0.99);
-        }
-
-        .btn-location:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-location svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* Divider */
-        .location-divider {
-            display: flex;
-            align-items: center;
-            margin: 20px 0;
-            color: var(--text-secondary);
-            font-size: 13px;
-        }
-
-        .location-divider::before,
-        .location-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border-color);
-        }
-
-        .location-divider span {
-            padding: 0 16px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
         /* Form Elements */
         .form-group {
             margin-bottom: 20px;
@@ -221,6 +159,13 @@
             color: var(--text-primary);
             transition: all 0.2s ease;
             outline: none;
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+
+        input[type="email"] {
+            text-align: left;
+            letter-spacing: normal;
         }
 
         input[type="email"]:hover,
@@ -237,60 +182,80 @@
 
         input::placeholder {
             color: var(--text-secondary);
+            letter-spacing: normal;
         }
 
-        /* Address Input Container */
-        .address-input-container {
-            position: relative;
+        /* Quick Check Form */
+        .quick-check-form {
+            display: flex;
+            gap: 12px;
         }
 
-        /* Autocomplete Dropdown */
-        .autocomplete-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border-color);
+        .quick-check-form input {
+            flex: 1;
+        }
+
+        .quick-check-form .btn {
+            width: auto;
+            padding: 16px 24px;
+            white-space: nowrap;
+        }
+
+        /* Location Divider */
+        .location-divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .location-divider::before,
+        .location-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        .location-divider span {
+            padding: 0 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Location Button */
+        .btn-location {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 20px;
+            background: white;
+            border: 2px solid var(--accent);
+            color: var(--accent);
             border-radius: 12px;
-            box-shadow: var(--shadow-lg);
-            margin-top: 8px;
-            max-height: 280px;
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
-        }
-
-        .autocomplete-dropdown.visible {
-            display: block;
-            animation: fadeIn 0.2s ease;
-        }
-
-        .autocomplete-item {
-            padding: 14px 18px;
-            cursor: pointer;
-            transition: background 0.15s ease;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .autocomplete-item:last-child {
-            border-bottom: none;
-        }
-
-        .autocomplete-item:hover {
-            background: var(--bg-secondary);
-        }
-
-        .autocomplete-item-main {
             font-size: 15px;
             font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 2px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .autocomplete-item-sub {
-            font-size: 13px;
-            color: var(--text-secondary);
+        .btn-location:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-location:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-location svg {
+            width: 18px;
+            height: 18px;
         }
 
         /* Buttons */
@@ -476,12 +441,6 @@
             color: var(--text-primary);
         }
 
-        .result-card-details {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
-
         .result-card-status {
             font-size: 13px;
             padding: 5px 12px;
@@ -495,19 +454,9 @@
             color: #248a3d;
         }
 
-        .result-card-status.scheduled {
-            background: rgba(255, 149, 0, 0.1);
-            color: #c93400;
-        }
-
         .result-card-status.active {
             background: rgba(255, 59, 48, 0.1);
             color: #d70015;
-        }
-
-        .result-card-status.done {
-            background: rgba(90, 200, 250, 0.1);
-            color: #0071e3;
         }
 
         /* Subscribe CTA */
@@ -808,6 +757,14 @@
                 border-radius: 16px;
             }
 
+            .quick-check-form {
+                flex-direction: column;
+            }
+
+            .quick-check-form .btn {
+                width: 100%;
+            }
+
             .alert-card {
                 padding: 14px;
                 gap: 12px;
@@ -865,8 +822,25 @@
             <div class="card quick-check-card">
                 <div class="quick-check-header">
                     <h2>Quick Check</h2>
-                    <p>Check your street status without subscribing</p>
+                    <p>Check today's status without subscribing</p>
                 </div>
+
+                <!-- Postal Code Form -->
+                <form id="quickCheckForm" class="quick-check-form">
+                    <input
+                        type="text"
+                        id="quickPostalCode"
+                        placeholder="H2X 1Y4"
+                        maxlength="7"
+                        autocomplete="postal-code"
+                        required
+                    >
+                    <button type="submit" id="quickCheckBtn" class="btn btn-primary">
+                        Check Now
+                    </button>
+                </form>
+
+                <div class="location-divider"><span>or</span></div>
 
                 <!-- Geolocation Button -->
                 <button type="button" id="geolocateBtn" class="btn-location">
@@ -881,33 +855,6 @@
                     <span id="geolocateBtnText">Use My Location</span>
                 </button>
 
-                <div class="location-divider"><span>or</span></div>
-
-                <!-- Address Input -->
-                <div class="address-input-container">
-                    <input
-                        type="text"
-                        id="addressInput"
-                        placeholder="Enter your Montreal address..."
-                        autocomplete="off"
-                    >
-                    <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
-                </div>
-
-                <!-- Hidden fields -->
-                <input type="hidden" id="selectedCoteRueId">
-                <input type="hidden" id="selectedLat">
-                <input type="hidden" id="selectedLon">
-
-                <!-- Check Button -->
-                <button type="button" id="checkBtn" class="btn btn-primary" style="margin-top: 16px;" disabled>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"/>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    Check Status
-                </button>
-
                 <div id="checkMessage" class="message"></div>
 
                 <!-- Results Section -->
@@ -918,8 +865,8 @@
                             <circle cx="12" cy="10" r="3"/>
                         </svg>
                         <div class="results-header-text">
-                            <div id="resultsAddress" class="results-header-address"></div>
-                            <div id="resultsBorough" class="results-header-sub"></div>
+                            <div id="resultsLocation" class="results-header-address"></div>
+                            <div id="resultsPostal" class="results-header-sub"></div>
                         </div>
                     </div>
                     <div id="resultsGrid" class="results-grid"></div>
@@ -944,20 +891,15 @@
             <div class="card">
                 <form id="subscribeForm">
                     <div class="form-group">
-                        <label for="subscribeAddress">Your Address</label>
-                        <div class="address-input-container">
-                            <input
-                                type="text"
-                                id="subscribeAddress"
-                                placeholder="Enter your Montreal address..."
-                                autocomplete="off"
-                                required
-                            >
-                            <div id="subscribeAutocomplete" class="autocomplete-dropdown"></div>
-                        </div>
-                        <input type="hidden" id="subscribeCoteRueId">
-                        <input type="hidden" id="subscribeLat">
-                        <input type="hidden" id="subscribeLon">
+                        <label for="postalCode">Postal Code</label>
+                        <input
+                            type="text"
+                            id="postalCode"
+                            placeholder="H2X 1Y4"
+                            maxlength="7"
+                            autocomplete="postal-code"
+                            required
+                        >
                     </div>
 
                     <div class="form-group">
@@ -982,7 +924,7 @@
                                 <div class="alert-card-icon">❄️</div>
                                 <div class="alert-card-content">
                                     <div class="alert-card-title">Snow Removal</div>
-                                    <div class="alert-card-desc">Get notified when snow removal is scheduled or in progress on your street</div>
+                                    <div class="alert-card-desc">Get notified when snow removal is scheduled for your area</div>
                                 </div>
                                 <div class="alert-card-toggle"></div>
                             </label>
@@ -993,14 +935,14 @@
                                 <div class="alert-card-icon">🗑️</div>
                                 <div class="alert-card-content">
                                     <div class="alert-card-title">Waste Collection</div>
-                                    <div class="alert-card-desc">Day-before reminder at 6 PM for garbage and recycling pickup</div>
+                                    <div class="alert-card-desc">Day-before reminder at 6 PM for garbage and recycling</div>
                                 </div>
                                 <div class="alert-card-toggle"></div>
                             </label>
                         </div>
                     </div>
 
-                    <button type="submit" id="subscribeBtn" class="btn btn-primary" disabled>
+                    <button type="submit" id="subscribeBtn" class="btn btn-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -1025,7 +967,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="20 6 9 17 4 12"/>
                             </svg>
-                            Snow removal alerts are sent when operations are scheduled for your street
+                            Snow removal alerts are sent when operations are scheduled for your area
                         </li>
                         <li>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1054,7 +996,7 @@
                         placeholder="you@example.com"
                         autocomplete="email"
                         required
-                        style="margin-bottom: 12px;"
+                        style="margin-bottom: 12px; text-align: left;"
                     >
                     <button type="submit" class="btn btn-secondary">Unsubscribe from All Alerts</button>
                 </form>
@@ -1069,9 +1011,24 @@
     </div>
 
     <script>
-        let debounceTimer;
-        let selectedAddress = null;
-        let subscribeSelectedAddress = null;
+        // Format postal code as user types
+        function formatPostalCode(input) {
+            let value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (value.length > 3) {
+                value = value.slice(0, 3) + ' ' + value.slice(3, 6);
+            }
+            input.value = value;
+        }
+
+        document.getElementById('quickPostalCode').addEventListener('input', (e) => formatPostalCode(e.target));
+        document.getElementById('postalCode').addEventListener('input', (e) => formatPostalCode(e.target));
+
+        // Quick check form
+        document.getElementById('quickCheckForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const postalCode = document.getElementById('quickPostalCode').value.trim();
+            await checkByPostalCode(postalCode);
+        });
 
         // Geolocation
         document.getElementById('geolocateBtn').addEventListener('click', async () => {
@@ -1098,30 +1055,22 @@
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
 
-                btnText.textContent = 'Finding address...';
+                btnText.textContent = 'Checking status...';
 
-                const response = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`);
+                const response = await fetch(`/api/snow-status?lat=${lat}&lon=${lon}`);
                 const data = await response.json();
 
-                if (data.cote_rue_id) {
-                    document.getElementById('selectedCoteRueId').value = data.cote_rue_id;
-                    document.getElementById('selectedLat').value = lat;
-                    document.getElementById('selectedLon').value = lon;
-                    document.getElementById('addressInput').value =
-                        `${data.civic_number || ''} ${data.street_type || ''} ${data.street_name}`.trim();
-                    selectedAddress = data;
-                    document.getElementById('checkBtn').disabled = false;
-
-                    // Auto-check status
-                    checkStatus();
+                if (response.ok) {
+                    displayLocationResults(lat, lon, data);
                 } else {
-                    showMessage('checkMessage', 'Could not find your address. Please enter it manually.', 'error');
+                    showMessage('checkMessage', data.error || 'Could not check status for your location', 'error');
                 }
+
             } catch (error) {
                 if (error.code === 1) {
-                    showMessage('checkMessage', 'Location access denied. Please enable permissions or enter your address.', 'error');
+                    showMessage('checkMessage', 'Location access denied. Please enter your postal code instead.', 'error');
                 } else {
-                    showMessage('checkMessage', 'Error getting location. Please enter your address manually.', 'error');
+                    showMessage('checkMessage', 'Error getting location. Please enter your postal code.', 'error');
                 }
             }
 
@@ -1129,150 +1078,54 @@
             btnText.textContent = 'Use My Location';
         });
 
-        // Address autocomplete for quick check
-        setupAutocomplete('addressInput', 'autocompleteDropdown', (address) => {
-            selectedAddress = address;
-            document.getElementById('selectedCoteRueId').value = address.cote_rue_id;
-            document.getElementById('checkBtn').disabled = false;
-        });
+        async function checkByPostalCode(postalCode) {
+            const btn = document.getElementById('quickCheckBtn');
+            const msg = document.getElementById('checkMessage');
 
-        // Address autocomplete for subscribe form
-        setupAutocomplete('subscribeAddress', 'subscribeAutocomplete', (address) => {
-            subscribeSelectedAddress = address;
-            document.getElementById('subscribeCoteRueId').value = address.cote_rue_id;
-            updateSubscribeButton();
-        });
-
-        function setupAutocomplete(inputId, dropdownId, onSelect) {
-            const input = document.getElementById(inputId);
-            const dropdown = document.getElementById(dropdownId);
-
-            input.addEventListener('input', (e) => {
-                clearTimeout(debounceTimer);
-                const query = e.target.value.trim();
-
-                if (query.length < 3) {
-                    dropdown.classList.remove('visible');
-                    return;
-                }
-
-                debounceTimer = setTimeout(async () => {
-                    try {
-                        const response = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`);
-                        const data = await response.json();
-                        showAutocompleteResults(dropdown, data.results || [], onSelect, input);
-                    } catch (e) {
-                        console.error('Autocomplete error:', e);
-                    }
-                }, 300);
-            });
-
-            // Hide dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest(`#${inputId}`) && !e.target.closest(`#${dropdownId}`)) {
-                    dropdown.classList.remove('visible');
-                }
-            });
-        }
-
-        function showAutocompleteResults(dropdown, results, onSelect, input) {
-            if (results.length === 0) {
-                dropdown.classList.remove('visible');
+            // Validate format
+            const cleanPostal = postalCode.replace(/\s/g, '');
+            if (!/^[A-Z]\d[A-Z]\d[A-Z]\d$/i.test(cleanPostal)) {
+                showMessage('checkMessage', 'Please enter a valid postal code (e.g., H2X 1Y4)', 'error');
                 return;
             }
 
-            dropdown.innerHTML = results.map((r, i) => `
-                <div class="autocomplete-item" data-index="${i}">
-                    <div class="autocomplete-item-main">${r.display}</div>
-                    <div class="autocomplete-item-sub">${r.address_range} (${r.cote})</div>
-                </div>
-            `).join('');
-
-            dropdown.querySelectorAll('.autocomplete-item').forEach((item, i) => {
-                item.addEventListener('click', () => {
-                    const address = results[i];
-                    input.value = address.display;
-                    dropdown.classList.remove('visible');
-                    onSelect(address);
-                });
-            });
-
-            dropdown.classList.add('visible');
-        }
-
-        // Check status
-        document.getElementById('checkBtn').addEventListener('click', checkStatus);
-
-        async function checkStatus() {
-            const coteRueId = document.getElementById('selectedCoteRueId').value;
-            const lat = document.getElementById('selectedLat').value;
-            const lon = document.getElementById('selectedLon').value;
-
-            if (!coteRueId) {
-                showMessage('checkMessage', 'Please select an address first', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('checkBtn');
             btn.disabled = true;
             btn.classList.add('btn-loading');
+            msg.className = 'message';
             document.getElementById('resultsSection').classList.remove('visible');
-            document.getElementById('checkMessage').className = 'message';
 
             try {
-                // Fetch snow status
-                const snowResponse = await fetch(`/api/snow-status?cote_rue_id=${coteRueId}`);
-                const snowData = await snowResponse.json();
+                const response = await fetch(`/api/quick-check/${encodeURIComponent(cleanPostal)}`);
+                const data = await response.json();
 
-                // Fetch waste schedule if we have coordinates
-                let wasteData = null;
-                if (lat && lon) {
-                    const wasteResponse = await fetch(`/api/waste-schedule?lat=${lat}&lon=${lon}`);
-                    if (wasteResponse.ok) {
-                        wasteData = await wasteResponse.json();
-                    }
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    showMessage('checkMessage', data.error || 'Could not check status', 'error');
                 }
-
-                displayResults(snowData, wasteData);
 
             } catch (error) {
                 console.error('Error:', error);
-                showMessage('checkMessage', 'Failed to load status. Please try again.', 'error');
+                showMessage('checkMessage', 'Network error. Please try again.', 'error');
             }
 
             btn.disabled = false;
             btn.classList.remove('btn-loading');
         }
 
-        function displayResults(snowData, wasteData) {
+        function displayResults(data) {
             const section = document.getElementById('resultsSection');
             const grid = document.getElementById('resultsGrid');
 
             // Update header
-            if (selectedAddress) {
-                document.getElementById('resultsAddress').textContent =
-                    `${selectedAddress.civic_number || ''} ${selectedAddress.street_type || ''} ${selectedAddress.street_name}`.trim();
-                document.getElementById('resultsBorough').textContent = selectedAddress.borough || 'Montreal';
-            }
+            document.getElementById('resultsLocation').textContent = data.location_name || 'Montreal';
+            document.getElementById('resultsPostal').textContent = data.postal_code;
 
             grid.innerHTML = '';
 
-            // Snow status card
-            const status = snowData.status || {};
-            const display = status.display || {};
-            let statusClass = 'clear';
-            let statusText = 'Clear';
-
-            if (status.etat_deneig === 1 || status.etat_deneig === 2) {
-                statusClass = 'scheduled';
-                statusText = 'Scheduled';
-            } else if (status.etat_deneig === 3) {
-                statusClass = 'active';
-                statusText = 'In Progress';
-            } else if (status.etat_deneig === 4) {
-                statusClass = 'done';
-                statusText = 'Completed';
-            }
+            // Snow status
+            const snowStatus = data.snow_status || {};
+            const hasOperation = snowStatus.etat_deneig && snowStatus.etat_deneig > 0;
 
             const snowCard = document.createElement('div');
             snowCard.className = 'result-card snow';
@@ -1280,23 +1133,24 @@
                 <div class="result-card-icon">❄️</div>
                 <div class="result-card-content">
                     <div class="result-card-label">Snow Removal</div>
-                    <div class="result-card-value">${display.en || 'No operation scheduled'}</div>
-                    ${status.scheduled_start ? `<div class="result-card-details">Starts: ${new Date(status.scheduled_start).toLocaleString()}</div>` : ''}
+                    <div class="result-card-value">${snowStatus.display?.en || snowStatus.message || 'No operation scheduled'}</div>
                 </div>
-                <span class="result-card-status ${statusClass}">${statusText}</span>
+                <span class="result-card-status ${hasOperation ? 'active' : 'clear'}">
+                    ${hasOperation ? 'Active' : 'Clear'}
+                </span>
             `;
             grid.appendChild(snowCard);
 
-            // Waste schedule cards
-            if (wasteData) {
-                for (const [type, schedule] of Object.entries(wasteData)) {
+            // Waste schedule
+            if (data.waste_schedule) {
+                for (const [type, schedule] of Object.entries(data.waste_schedule)) {
                     const wasteCard = document.createElement('div');
                     wasteCard.className = 'result-card waste';
                     wasteCard.innerHTML = `
                         <div class="result-card-icon">${type === 'garbage' ? '🗑️' : '♻️'}</div>
                         <div class="result-card-content">
                             <div class="result-card-label">${schedule.name}</div>
-                            <div class="result-card-value">${schedule.next_collection_display || schedule.day_of_week || 'Not available'}</div>
+                            <div class="result-card-value">${schedule.next_collection_display || schedule.day_of_week || 'Schedule available'}</div>
                         </div>
                     `;
                     grid.appendChild(wasteCard);
@@ -1304,6 +1158,37 @@
             }
 
             section.classList.add('visible');
+            document.getElementById('checkMessage').className = 'message';
+        }
+
+        function displayLocationResults(lat, lon, data) {
+            const section = document.getElementById('resultsSection');
+            const grid = document.getElementById('resultsGrid');
+
+            document.getElementById('resultsLocation').textContent = 'Your Location';
+            document.getElementById('resultsPostal').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+            grid.innerHTML = '';
+
+            const status = data.status || {};
+            const hasOperation = status.etat_deneig && status.etat_deneig > 0;
+
+            const snowCard = document.createElement('div');
+            snowCard.className = 'result-card snow';
+            snowCard.innerHTML = `
+                <div class="result-card-icon">❄️</div>
+                <div class="result-card-content">
+                    <div class="result-card-label">Snow Removal</div>
+                    <div class="result-card-value">${status.display?.en || 'No operation scheduled'}</div>
+                </div>
+                <span class="result-card-status ${hasOperation ? 'active' : 'clear'}">
+                    ${hasOperation ? 'Active' : 'Clear'}
+                </span>
+            `;
+            grid.appendChild(snowCard);
+
+            section.classList.add('visible');
+            document.getElementById('checkMessage').className = 'message';
         }
 
         // Toggle alert card selection
@@ -1314,35 +1199,14 @@
             });
         });
 
-        // Email input validation
-        document.getElementById('email').addEventListener('input', updateSubscribeButton);
-
-        function updateSubscribeButton() {
-            const hasAddress = document.getElementById('subscribeCoteRueId').value;
-            const hasEmail = document.getElementById('email').value.includes('@');
-            document.getElementById('subscribeBtn').disabled = !hasAddress || !hasEmail;
-        }
-
         // Subscribe CTA
         document.getElementById('subscribeCta').addEventListener('click', () => {
-            // Copy address to subscribe form
-            if (selectedAddress) {
-                document.getElementById('subscribeAddress').value =
-                    `${selectedAddress.civic_number || ''} ${selectedAddress.street_type || ''} ${selectedAddress.street_name}`.trim();
-                document.getElementById('subscribeCoteRueId').value = selectedAddress.cote_rue_id;
-                document.getElementById('subscribeLat').value = document.getElementById('selectedLat').value;
-                document.getElementById('subscribeLon').value = document.getElementById('selectedLon').value;
-                subscribeSelectedAddress = selectedAddress;
+            const quickPostal = document.getElementById('quickPostalCode').value;
+            if (quickPostal) {
+                document.getElementById('postalCode').value = quickPostal;
             }
-
-            // Scroll to subscribe form
             document.getElementById('subscribeForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            // Focus email after scroll
-            setTimeout(() => {
-                document.getElementById('email').focus();
-                updateSubscribeButton();
-            }, 500);
+            setTimeout(() => document.getElementById('email').focus(), 500);
         });
 
         // Subscribe form
@@ -1351,6 +1215,8 @@
 
             const btn = document.getElementById('subscribeBtn');
             const msg = document.getElementById('subscribeMessage');
+            const postalCode = document.getElementById('postalCode').value.trim();
+            const email = document.getElementById('email').value.trim();
 
             // Validate at least one alert type
             const snowChecked = document.getElementById('snowAlerts').checked;
@@ -1366,21 +1232,27 @@
             msg.className = 'message';
 
             try {
+                // First geocode the postal code to get coordinates
+                const cleanPostal = postalCode.replace(/\s/g, '');
+                const geocodeResponse = await fetch(`/api/geocode/postal-code?postal_code=${encodeURIComponent(cleanPostal)}`);
+                const geocodeData = await geocodeResponse.json();
+
+                if (!geocodeResponse.ok) {
+                    showMessage('subscribeMessage', geocodeData.error || 'Invalid postal code', 'error');
+                    btn.disabled = false;
+                    btn.classList.remove('btn-loading');
+                    return;
+                }
+
+                // Subscribe with postal code info
                 const response = await fetch('/api/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        email: document.getElementById('email').value,
-                        cote_rue_id: parseInt(document.getElementById('subscribeCoteRueId').value),
-                        address: {
-                            street_name: subscribeSelectedAddress?.street_name,
-                            street_type: subscribeSelectedAddress?.street_type,
-                            civic_number: subscribeSelectedAddress?.civic_number,
-                            cote: subscribeSelectedAddress?.cote,
-                            borough: subscribeSelectedAddress?.borough,
-                            latitude: parseFloat(document.getElementById('subscribeLat').value) || null,
-                            longitude: parseFloat(document.getElementById('subscribeLon').value) || null
-                        },
+                        email: email,
+                        postal_code: postalCode,
+                        latitude: geocodeData.latitude,
+                        longitude: geocodeData.longitude,
                         snow_alerts: snowChecked,
                         waste_alerts: wasteChecked
                     })
@@ -1391,9 +1263,17 @@
                 if (response.ok) {
                     showMessage('subscribeMessage', 'Successfully subscribed! Check your email for confirmation.', 'success');
                     document.getElementById('subscribeForm').reset();
-                    document.getElementById('subscribeCoteRueId').value = '';
-                    subscribeSelectedAddress = null;
-                    updateSubscribeButton();
+                    // Reset toggle states
+                    document.querySelectorAll('.alert-card').forEach(card => {
+                        const checkbox = card.querySelector('input[type="checkbox"]');
+                        if (checkbox.id === 'snowAlerts') {
+                            checkbox.checked = true;
+                            card.classList.add('selected');
+                        } else {
+                            checkbox.checked = false;
+                            card.classList.remove('selected');
+                        }
+                    });
                 } else {
                     showMessage('subscribeMessage', data.error || 'Subscription failed. Please try again.', 'error');
                 }
@@ -1410,7 +1290,6 @@
         // Unsubscribe form
         document.getElementById('unsubscribeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const email = document.getElementById('unsubEmail').value;
 
             try {
@@ -1426,11 +1305,9 @@
                     showMessage('unsubscribeMessage', 'You have been unsubscribed from all alerts.', 'success');
                     document.getElementById('unsubscribeForm').reset();
                 } else {
-                    showMessage('unsubscribeMessage', data.error || 'Unsubscribe failed. Please try again.', 'error');
+                    showMessage('unsubscribeMessage', data.error || 'Unsubscribe failed.', 'error');
                 }
-
             } catch (error) {
-                console.error('Error:', error);
                 showMessage('unsubscribeMessage', 'Network error. Please try again.', 'error');
             }
         });

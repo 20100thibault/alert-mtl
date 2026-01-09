@@ -42,14 +42,17 @@ class Address(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subscriber_id = db.Column(db.Integer, db.ForeignKey('subscribers.id'), nullable=False)
 
-    # Address components
-    street_name = db.Column(db.String(255), nullable=False)
+    # Postal code (primary identifier now)
+    postal_code = db.Column(db.String(10), index=True)
+
+    # Address components (optional now)
+    street_name = db.Column(db.String(255))
     street_type = db.Column(db.String(50))  # Rue, Avenue, Boulevard, etc.
-    civic_number = db.Column(db.Integer, nullable=False)
+    civic_number = db.Column(db.Integer)
     borough = db.Column(db.String(100))
 
-    # Montreal-specific identifiers
-    cote_rue_id = db.Column(db.Integer, nullable=False, index=True)
+    # Montreal-specific identifiers (optional now)
+    cote_rue_id = db.Column(db.Integer, index=True)
     cote = db.Column(db.String(10))  # "Droit" or "Gauche"
 
     # Coordinates for waste collection lookup
@@ -69,22 +72,30 @@ class Address(db.Model):
                                     cascade='all, delete-orphan')
 
     def __repr__(self):
+        if self.postal_code:
+            return f'<Address {self.postal_code}>'
         return f'<Address {self.civic_number} {self.street_name}>'
 
     def full_address(self):
         """Return formatted full address."""
-        parts = [str(self.civic_number)]
+        if self.postal_code and not self.street_name:
+            return self.postal_code
+        parts = []
+        if self.civic_number:
+            parts.append(str(self.civic_number))
         if self.street_type:
             parts.append(self.street_type)
-        parts.append(self.street_name)
+        if self.street_name:
+            parts.append(self.street_name)
         if self.borough:
             parts.append(f", {self.borough}")
-        return ' '.join(parts)
+        return ' '.join(parts) if parts else self.postal_code or 'Unknown'
 
     def to_dict(self):
         return {
             'id': self.id,
             'full_address': self.full_address(),
+            'postal_code': self.postal_code,
             'street_name': self.street_name,
             'street_type': self.street_type,
             'civic_number': self.civic_number,
