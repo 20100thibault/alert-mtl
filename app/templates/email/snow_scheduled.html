@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: #F97316; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">Snow Removal Scheduled</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Alert MTL</p>
+    </div>
+
+    <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="background: #FFF7ED; border: 2px solid #F97316; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #EA580C; margin: 0 0 10px 0;">Move Your Vehicle!</h2>
+            <p style="margin: 0;">Snow removal has been scheduled for your street.</p>
+        </div>
+
+        <div style="background: #F3F4F6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <strong style="font-size: 18px;">{{ address }}</strong>
+        </div>
+
+        {% if status.scheduled_start %}
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                    <strong>Operation Starts:</strong>
+                </td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                    {{ status.scheduled_start }}
+                </td>
+            </tr>
+            {% if status.scheduled_end %}
+            <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                    <strong>Expected End:</strong>
+                </td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                    {{ status.scheduled_end }}
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td style="padding: 10px 0;">
+                    <strong>Parking:</strong>
+                </td>
+                <td style="padding: 10px 0; text-align: right; color: #EF4444;">
+                    <strong>PROHIBITED</strong> during operation
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+
+        <p style="color: #6B7280; font-size: 14px;">
+            Please move your vehicle before the scheduled start time to avoid tickets or towing.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+        <p style="font-size: 12px; color: #6B7280;">
+            <a href="{{ unsubscribe_url }}" style="color: #2563EB;">Unsubscribe</a> from Alert MTL
+        </p>
+    </div>
+</body>
+</html>

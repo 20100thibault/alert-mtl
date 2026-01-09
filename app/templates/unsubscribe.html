@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Unsubscribe - Alert MTL{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 text-center">
+    {% if success %}
+        <div class="text-green-500 mb-4">
+            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-2">Unsubscribed Successfully</h2>
+        <p class="text-gray-600 mb-4">
+            {{ email }} has been unsubscribed from all Alert MTL notifications.
+        </p>
+        <p class="text-gray-500 text-sm">
+            Changed your mind? <a href="/" class="text-blue-600 hover:underline">Subscribe again</a>
+        </p>
+    {% else %}
+        <div class="text-red-500 mb-4">
+            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-2">Unsubscribe Failed</h2>
+        <p class="text-gray-600 mb-4">
+            {{ error or 'Invalid or expired unsubscribe link.' }}
+        </p>
+        <a href="/" class="text-blue-600 hover:underline">Return to home</a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block title %}Alert MTL - Snow Removal & Waste Alerts{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <!-- Hero Section -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 text-center">
+            Check Your Street Status
+        </h2>
+
+        <!-- Geolocation Button -->
+        <button
+            id="geolocate-btn"
+            onclick="useMyLocation()"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg mb-4 flex items-center justify-center gap-2 transition"
+        >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span id="geolocate-text">Use My Location</span>
+        </button>
+
+        <div class="flex items-center my-4">
+            <div class="flex-grow border-t border-gray-300"></div>
+            <span class="px-4 text-gray-500 text-sm">OR</span>
+            <div class="flex-grow border-t border-gray-300"></div>
+        </div>
+
+        <!-- Address Input -->
+        <div class="relative">
+            <input
+                type="text"
+                id="address-input"
+                placeholder="Enter your Montreal address..."
+                class="w-full border border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autocomplete="off"
+            >
+            <!-- Autocomplete dropdown -->
+            <div id="autocomplete-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 shadow-lg hidden max-h-60 overflow-y-auto">
+            </div>
+        </div>
+
+        <!-- Hidden fields for selected address -->
+        <input type="hidden" id="selected-cote-rue-id">
+        <input type="hidden" id="selected-lat">
+        <input type="hidden" id="selected-lon">
+
+        <!-- Check Status Button -->
+        <button
+            id="check-btn"
+            onclick="checkStatus()"
+            class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg mt-4 transition disabled:bg-gray-400"
+            disabled
+        >
+            Check Status
+        </button>
+    </div>
+
+    <!-- Status Display -->
+    <div id="status-container" class="hidden">
+        <!-- Loading State -->
+        <div id="loading-state" class="bg-white rounded-lg shadow-lg p-6 text-center hidden">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-gray-600">Checking status...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="bg-red-50 border border-red-200 rounded-lg p-6 hidden">
+            <p class="text-red-700" id="error-message">An error occurred.</p>
+            <button onclick="checkStatus()" class="mt-4 text-red-600 hover:underline">Try again</button>
+        </div>
+
+        <!-- Results -->
+        <div id="results-state" class="space-y-4 hidden">
+            <!-- Address Header -->
+            <div class="bg-white rounded-lg shadow-lg p-4">
+                <p class="text-lg font-semibold text-gray-800" id="result-address"></p>
+                <p class="text-sm text-gray-500" id="result-borough"></p>
+            </div>
+
+            <!-- Snow Status Card -->
+            <div id="snow-status-card" class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div id="snow-status-header" class="p-4 text-white">
+                    <h3 class="font-semibold text-lg" id="snow-status-title">Snow Removal Status</h3>
+                </div>
+                <div class="p-4">
+                    <p class="text-gray-700 mb-2" id="snow-status-message"></p>
+                    <div id="snow-status-details" class="text-sm text-gray-600 space-y-1"></div>
+                </div>
+            </div>
+
+            <!-- Waste Schedule Card -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gray-700 p-4 text-white">
+                    <h3 class="font-semibold text-lg">Waste Collection Schedule</h3>
+                </div>
+                <div class="p-4" id="waste-schedule-content">
+                    <!-- Filled by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Section -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mt-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Get Email Alerts</h3>
+        <p class="text-gray-600 text-sm mb-4">
+            Receive notifications when snow removal is scheduled for your street, or reminders before waste collection.
+        </p>
+
+        <form id="subscribe-form" onsubmit="subscribe(event)">
+            <div class="flex gap-2">
+                <input
+                    type="email"
+                    id="email-input"
+                    placeholder="your@email.com"
+                    required
+                    class="flex-grow border border-gray-300 rounded-lg py-2 px-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <button
+                    type="submit"
+                    id="subscribe-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition disabled:bg-gray-400"
+                    disabled
+                >
+                    Subscribe
+                </button>
+            </div>
+        </form>
+
+        <div id="subscribe-success" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p class="text-green-700">Successfully subscribed! Check your email for confirmation.</p>
+        </div>
+
+        <div id="subscribe-error" class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-red-700" id="subscribe-error-message"></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let debounceTimer;
+    let selectedAddress = null;
+
+    // Geolocation
+    function useMyLocation() {
+        const btn = document.getElementById('geolocate-btn');
+        const text = document.getElementById('geolocate-text');
+
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            return;
+        }
+
+        text.textContent = 'Getting location...';
+        btn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                document.getElementById('selected-lat').value = lat;
+                document.getElementById('selected-lon').value = lon;
+
+                // Reverse geocode
+                try {
+                    const response = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`);
+                    const data = await response.json();
+
+                    if (data.cote_rue_id) {
+                        document.getElementById('selected-cote-rue-id').value = data.cote_rue_id;
+                        document.getElementById('address-input').value = `${data.civic_number} ${data.street_type || ''} ${data.street_name}`.trim();
+                        selectedAddress = data;
+                        enableButtons();
+                    } else {
+                        alert('Could not find your address. Please enter it manually.');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Error getting address. Please enter it manually.');
+                }
+
+                text.textContent = 'Use My Location';
+                btn.disabled = false;
+            },
+            (error) => {
+                text.textContent = 'Use My Location';
+                btn.disabled = false;
+
+                if (error.code === error.PERMISSION_DENIED) {
+                    alert('Location access denied. Please enable location permissions or enter your address manually.');
+                } else {
+                    alert('Error getting location. Please enter your address manually.');
+                }
+            }
+        );
+    }
+
+    // Address autocomplete
+    document.getElementById('address-input').addEventListener('input', function(e) {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+
+        if (query.length < 3) {
+            document.getElementById('autocomplete-results').classList.add('hidden');
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/address/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                showAutocompleteResults(data.results || []);
+            } catch (e) {
+                console.error('Autocomplete error:', e);
+            }
+        }, 300);
+    });
+
+    function showAutocompleteResults(results) {
+        const container = document.getElementById('autocomplete-results');
+
+        if (results.length === 0) {
+            container.classList.add('hidden');
+            return;
+        }
+
+        container.innerHTML = results.map(r => `
+            <div
+                class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                onclick="selectAddress(${JSON.stringify(r).replace(/"/g, '&quot;')})"
+            >
+                <p class="font-medium">${r.display}</p>
+                <p class="text-sm text-gray-500">${r.address_range} (${r.cote})</p>
+            </div>
+        `).join('');
+
+        container.classList.remove('hidden');
+    }
+
+    function selectAddress(address) {
+        document.getElementById('address-input').value = address.display;
+        document.getElementById('selected-cote-rue-id').value = address.cote_rue_id;
+        document.getElementById('autocomplete-results').classList.add('hidden');
+        selectedAddress = address;
+        enableButtons();
+    }
+
+    function enableButtons() {
+        document.getElementById('check-btn').disabled = false;
+        document.getElementById('subscribe-btn').disabled = false;
+    }
+
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#address-input') && !e.target.closest('#autocomplete-results')) {
+            document.getElementById('autocomplete-results').classList.add('hidden');
+        }
+    });
+
+    // Check status
+    async function checkStatus() {
+        const coteRueId = document.getElementById('selected-cote-rue-id').value;
+        const lat = document.getElementById('selected-lat').value;
+        const lon = document.getElementById('selected-lon').value;
+
+        if (!coteRueId) {
+            alert('Please select an address first');
+            return;
+        }
+
+        // Show loading
+        document.getElementById('status-container').classList.remove('hidden');
+        document.getElementById('loading-state').classList.remove('hidden');
+        document.getElementById('error-state').classList.add('hidden');
+        document.getElementById('results-state').classList.add('hidden');
+
+        try {
+            // Fetch snow status
+            const snowResponse = await fetch(`/api/snow-status?cote_rue_id=${coteRueId}`);
+            const snowData = await snowResponse.json();
+
+            // Fetch waste schedule (if we have coordinates)
+            let wasteData = null;
+            if (lat && lon) {
+                const wasteResponse = await fetch(`/api/waste-schedule?lat=${lat}&lon=${lon}`);
+                if (wasteResponse.ok) {
+                    wasteData = await wasteResponse.json();
+                }
+            }
+
+            // Hide loading, show results
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('results-state').classList.remove('hidden');
+
+            // Display results
+            displaySnowStatus(snowData);
+            displayWasteSchedule(wasteData);
+
+            // Update address display
+            if (selectedAddress) {
+                document.getElementById('result-address').textContent =
+                    `${selectedAddress.civic_number || ''} ${selectedAddress.street_type || ''} ${selectedAddress.street_name}`.trim();
+                document.getElementById('result-borough').textContent = selectedAddress.borough || 'Montreal';
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+            document.getElementById('error-message').textContent = 'Failed to load status. Please try again.';
+        }
+    }
+
+    function displaySnowStatus(data) {
+        const header = document.getElementById('snow-status-header');
+        const title = document.getElementById('snow-status-title');
+        const message = document.getElementById('snow-status-message');
+        const details = document.getElementById('snow-status-details');
+
+        const status = data.status || {};
+        const display = status.display || {};
+
+        // Set color
+        header.className = `p-4 text-white status-${display.color || 'gray'}`;
+
+        // Set title
+        title.textContent = display.en || 'Unknown Status';
+
+        // Set message
+        message.textContent = status.message || 'No information available';
+
+        // Set details
+        let detailsHtml = '';
+        if (status.scheduled_start) {
+            detailsHtml += `<p><strong>Starts:</strong> ${new Date(status.scheduled_start).toLocaleString()}</p>`;
+        }
+        if (status.scheduled_end) {
+            detailsHtml += `<p><strong>Ends:</strong> ${new Date(status.scheduled_end).toLocaleString()}</p>`;
+        }
+        detailsHtml += `<p><strong>Parking:</strong> ${status.parking_allowed ? 'Allowed' : 'Prohibited'}</p>`;
+        details.innerHTML = detailsHtml;
+    }
+
+    function displayWasteSchedule(data) {
+        const container = document.getElementById('waste-schedule-content');
+
+        if (!data) {
+            container.innerHTML = '<p class="text-gray-500">Enter coordinates to see waste schedule</p>';
+            return;
+        }
+
+        let html = '<div class="space-y-2">';
+
+        for (const [type, schedule] of Object.entries(data)) {
+            html += `
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span class="font-medium">${schedule.name}</span>
+                    <span class="text-gray-600">${schedule.next_collection_display || schedule.day_of_week}</span>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    // Subscribe
+    async function subscribe(e) {
+        e.preventDefault();
+
+        const email = document.getElementById('email-input').value;
+        const coteRueId = document.getElementById('selected-cote-rue-id').value;
+
+        if (!coteRueId) {
+            alert('Please select an address first');
+            return;
+        }
+
+        const btn = document.getElementById('subscribe-btn');
+        btn.disabled = true;
+        btn.textContent = 'Subscribing...';
+
+        try {
+            const response = await fetch('/api/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    cote_rue_id: parseInt(coteRueId),
+                    address: {
+                        street_name: selectedAddress?.street_name,
+                        street_type: selectedAddress?.street_type,
+                        civic_number: selectedAddress?.civic_number,
+                        cote: selectedAddress?.cote,
+                        borough: selectedAddress?.borough,
+                        latitude: parseFloat(document.getElementById('selected-lat').value) || null,
+                        longitude: parseFloat(document.getElementById('selected-lon').value) || null
+                    }
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('subscribe-success').classList.remove('hidden');
+                document.getElementById('subscribe-error').classList.add('hidden');
+            } else {
+                document.getElementById('subscribe-error').classList.remove('hidden');
+                document.getElementById('subscribe-error-message').textContent = data.error || 'Subscription failed';
+                document.getElementById('subscribe-success').classList.add('hidden');
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('subscribe-error').classList.remove('hidden');
+            document.getElementById('subscribe-error-message').textContent = 'Network error. Please try again.';
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Subscribe';
+    }
+</script>
+{% endblock %}

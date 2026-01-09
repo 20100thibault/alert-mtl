@@ -1,0 +1,49 @@
+name: Scheduled Alert Triggers
+
+on:
+  schedule:
+    # Wake up server 4 minutes before triggers (times in UTC)
+    # Snow check at 4 PM ET = 21:00 UTC, wake at 20:56
+    - cron: '56 20 * * *'
+    # Snow check trigger at 21:00 UTC
+    - cron: '0 21 * * *'
+    # Waste check at 6 PM ET = 23:00 UTC, wake at 22:56
+    - cron: '56 22 * * *'
+    # Waste check trigger at 23:00 UTC
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine action based on time
+        id: check-time
+        run: |
+          HOUR=$(date -u +%H)
+          MINUTE=$(date -u +%M)
+          echo "Current UTC time: $HOUR:$MINUTE"
+          if [ "$MINUTE" = "56" ]; then
+            echo "action=wake" >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "21" ] && [ "$MINUTE" = "00" ]; then
+            echo "action=snow" >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "23" ] && [ "$MINUTE" = "00" ]; then
+            echo "action=waste" >> $GITHUB_OUTPUT
+          else
+            echo "action=wake" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Wake up server
+        if: steps.check-time.outputs.action == 'wake'
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" ${{ secrets.RENDER_URL }} || true
+
+      - name: Trigger snow check
+        if: steps.check-time.outputs.action == 'snow'
+        run: |
+          curl -s "${{ secrets.RENDER_URL }}/admin/trigger-snow-check?token=${{ secrets.ADMIN_TOKEN }}"
+
+      - name: Trigger waste check
+        if: steps.check-time.outputs.action == 'waste'
+        run: |
+          curl -s "${{ secrets.RENDER_URL }}/admin/trigger-waste-check?token=${{ secrets.ADMIN_TOKEN }}"

@@ -1,0 +1,1640 @@
+{
+  "project": {
+    "name": "Alert MTL",
+    "description": "Montreal snow removal and waste collection alert system",
+    "version": "1.0.0",
+    "estimated_total_hours": 45,
+    "tech_stack": {
+      "backend": "Python Flask",
+      "database": "SQLite/PostgreSQL",
+      "scheduler": "APScheduler",
+      "soap_client": "zeep",
+      "email": "Resend",
+      "hosting": "Render.com"
+    }
+  },
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Project Setup & Infrastructure",
+      "estimated_hours": 3,
+      "tasks": [
+        {
+          "id": "task-1.1",
+          "name": "Initialize Flask project structure",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-1.1.1",
+              "name": "Create project directory structure",
+              "description": "Set up app/, templates/, static/, tests/ directories",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Verify all required directories exist",
+                  "file": "tests/test_structure.py"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.1.2",
+              "name": "Create requirements.txt with dependencies",
+              "description": "Flask, zeep, APScheduler, resend, python-dotenv, pytest",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Verify all packages can be imported",
+                  "file": "tests/test_imports.py"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.1.3",
+              "name": "Create Flask app factory",
+              "description": "Set up create_app() function with config loading",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test app creation with different configs",
+                  "file": "tests/test_app.py"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.1.4",
+              "name": "Set up environment configuration",
+              "description": "Create .env.example and config.py",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test config loading from environment",
+                  "file": "tests/test_config.py"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-1.2",
+          "name": "Set up database models",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-1.2.1",
+              "name": "Create Subscriber model",
+              "description": "Fields: id, email, created_at, is_active, unsubscribe_token",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test subscriber creation and validation",
+                  "file": "tests/test_models.py::test_subscriber_model"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.2.2",
+              "name": "Create Address model",
+              "description": "Fields: id, subscriber_id, street_name, civic_number, cote_rue_id, cote, borough",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test address creation and subscriber relationship",
+                  "file": "tests/test_models.py::test_address_model"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.2.3",
+              "name": "Create AlertHistory model",
+              "description": "Fields: id, address_id, alert_type, status, sent_at",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test alert history logging",
+                  "file": "tests/test_models.py::test_alert_history_model"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.2.4",
+              "name": "Set up database migrations",
+              "description": "Initialize Flask-Migrate for schema management",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test migration up and down",
+                  "file": "tests/test_migrations.py"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-1.3",
+          "name": "Configure testing infrastructure",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-1.3.1",
+              "name": "Set up pytest configuration",
+              "description": "Create pytest.ini and conftest.py with fixtures",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Verify test discovery works",
+                  "file": "tests/test_setup.py"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.3.2",
+              "name": "Create test fixtures for database",
+              "description": "In-memory SQLite for tests, sample data fixtures",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test fixture creation and cleanup",
+                  "file": "tests/conftest.py"
+                }
+              ]
+            },
+            {
+              "id": "mt-1.3.3",
+              "name": "Set up mock fixtures for external APIs",
+              "description": "Mock Planif-Neige, Geobase, and Resend responses",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Verify mocks return expected data",
+                  "file": "tests/test_mocks.py"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Geobase Double Integration",
+      "estimated_hours": 6,
+      "tasks": [
+        {
+          "id": "task-2.1",
+          "name": "Implement Geobase data loader",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-2.1.1",
+              "name": "Create Geobase download service",
+              "description": "Download JSON from donnees.montreal.ca, handle large file (74MB)",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test download with mocked response",
+                  "file": "tests/test_geobase.py::test_download_geobase"
+                },
+                {
+                  "type": "integration",
+                  "description": "Test actual download (skip in CI)",
+                  "file": "tests/test_geobase.py::test_download_geobase_live"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.1.2",
+              "name": "Parse Geobase JSON structure",
+              "description": "Extract COTE_RUE_ID, NOM_VOIE, DEBUT_ADRESSE, FIN_ADRESSE, COTE",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test parsing sample Geobase entries",
+                  "file": "tests/test_geobase.py::test_parse_geobase_entry"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.1.3",
+              "name": "Create local cache storage",
+              "description": "Store processed Geobase data in SQLite for fast lookups",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test cache write and read",
+                  "file": "tests/test_geobase.py::test_geobase_cache"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.1.4",
+              "name": "Implement cache refresh mechanism",
+              "description": "Weekly refresh with version check",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test cache invalidation logic",
+                  "file": "tests/test_geobase.py::test_cache_refresh"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-2.2",
+          "name": "Implement address lookup service",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-2.2.1",
+              "name": "Create address parser",
+              "description": "Parse user input: '1234 Rue Saint-Denis' → components",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test parsing various address formats",
+                  "file": "tests/test_address.py::test_parse_address"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.2.2",
+              "name": "Implement street name matching",
+              "description": "Fuzzy match against NOM_VOIE with normalization",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test street name variations (St-Denis, Saint-Denis)",
+                  "file": "tests/test_address.py::test_street_name_matching"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.2.3",
+              "name": "Implement civic number range lookup",
+              "description": "Find COTE_RUE_ID where civic_number is in DEBUT_ADRESSE-FIN_ADRESSE",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test address range matching",
+                  "file": "tests/test_address.py::test_civic_number_range"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.2.4",
+              "name": "Handle street side (COTE)",
+              "description": "Return both Droit/Gauche options or best match",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test side detection for odd/even addresses",
+                  "file": "tests/test_address.py::test_street_side"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-2.3",
+          "name": "Implement address autocomplete API",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-2.3.1",
+              "name": "Create /api/address/search endpoint",
+              "description": "Return matching addresses as user types",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test autocomplete with partial input",
+                  "file": "tests/test_routes.py::test_address_search"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.3.2",
+              "name": "Implement search result ranking",
+              "description": "Prioritize exact matches, then prefix, then fuzzy",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test result ordering",
+                  "file": "tests/test_address.py::test_search_ranking"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.3.3",
+              "name": "Add rate limiting to search",
+              "description": "Prevent abuse with 10 req/sec limit",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test rate limiting response",
+                  "file": "tests/test_routes.py::test_search_rate_limit"
+                }
+              ]
+            },
+            {
+              "id": "mt-2.3.4",
+              "name": "Create /api/address/validate endpoint",
+              "description": "Validate and return COTE_RUE_ID for full address",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test validation with valid/invalid addresses",
+                  "file": "tests/test_routes.py::test_address_validate"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Planif-Neige API Integration",
+      "estimated_hours": 8,
+      "tasks": [
+        {
+          "id": "task-3.1",
+          "name": "Implement SOAP client for Planif-Neige",
+          "estimated_hours": 3,
+          "microtasks": [
+            {
+              "id": "mt-3.1.1",
+              "name": "Set up zeep SOAP client",
+              "description": "Initialize client with WSDL endpoint",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test client initialization",
+                  "file": "tests/test_planifneige.py::test_client_init"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.1.2",
+              "name": "Implement GetPlanificationsForDate method",
+              "description": "Fetch all planned operations for a given date",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test with mocked SOAP response",
+                  "file": "tests/test_planifneige.py::test_get_planifications"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.1.3",
+              "name": "Implement GetPlanificationInfosForDate method",
+              "description": "Fetch detailed info for specific streets",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test detailed info parsing",
+                  "file": "tests/test_planifneige.py::test_get_planification_infos"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.1.4",
+              "name": "Handle SOAP faults and errors",
+              "description": "Graceful handling of API errors, timeouts",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test error handling scenarios",
+                  "file": "tests/test_planifneige.py::test_soap_errors"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-3.2",
+          "name": "Implement status lookup by COTE_RUE_ID",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-3.2.1",
+              "name": "Create status lookup function",
+              "description": "Query API for specific COTE_RUE_ID status",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test status lookup",
+                  "file": "tests/test_planifneige.py::test_lookup_status"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.2.2",
+              "name": "Parse status response",
+              "description": "Extract etat, date_debut, date_fin, date_maj",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test response parsing",
+                  "file": "tests/test_planifneige.py::test_parse_status"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.2.3",
+              "name": "Map status codes to display values",
+              "description": "enneige→Snowy, planifie→Scheduled, etc.",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test status code mapping",
+                  "file": "tests/test_planifneige.py::test_status_mapping"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.2.4",
+              "name": "Map status to color codes",
+              "description": "Blue, Orange, Purple, Green, Red, Yellow",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test color code mapping",
+                  "file": "tests/test_planifneige.py::test_color_mapping"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-3.3",
+          "name": "Implement rate limiting and caching",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-3.3.1",
+              "name": "Create response cache",
+              "description": "Cache API responses for 5 minutes (API rate limit)",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test cache hit/miss",
+                  "file": "tests/test_planifneige.py::test_response_cache"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.3.2",
+              "name": "Implement request throttling",
+              "description": "Queue requests to respect 1 req/5 min limit",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test throttling behavior",
+                  "file": "tests/test_planifneige.py::test_request_throttle"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.3.3",
+              "name": "Implement batch query strategy",
+              "description": "Use GetPlanificationsForDate for bulk, then filter",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test batch query efficiency",
+                  "file": "tests/test_planifneige.py::test_batch_query"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.3.4",
+              "name": "Add cache invalidation on status change",
+              "description": "Force refresh when status update detected",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test cache invalidation",
+                  "file": "tests/test_planifneige.py::test_cache_invalidation"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-3.4",
+          "name": "Implement status change detection",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-3.4.1",
+              "name": "Store previous status per address",
+              "description": "Track last known status in database",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test status storage",
+                  "file": "tests/test_planifneige.py::test_status_storage"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.4.2",
+              "name": "Detect status transitions",
+              "description": "Compare current vs previous, flag changes",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test transition detection",
+                  "file": "tests/test_planifneige.py::test_status_transitions"
+                }
+              ]
+            },
+            {
+              "id": "mt-3.4.3",
+              "name": "Prioritize alert-worthy transitions",
+              "description": "→planifie, →en_cours, →red are high priority",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test priority logic",
+                  "file": "tests/test_planifneige.py::test_transition_priority"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Waste Collection Integration",
+      "estimated_hours": 5,
+      "tasks": [
+        {
+          "id": "task-4.1",
+          "name": "Implement waste collection data loader",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-4.1.1",
+              "name": "Download GEOJSON waste collection files",
+              "description": "Fetch all 6 collection type files from donnees.montreal.ca",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test download with mocked response",
+                  "file": "tests/test_waste.py::test_download_geojson"
+                }
+              ]
+            },
+            {
+              "id": "mt-4.1.2",
+              "name": "Parse GEOJSON structure",
+              "description": "Extract sector polygons and schedule data",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test GEOJSON parsing",
+                  "file": "tests/test_waste.py::test_parse_geojson"
+                }
+              ]
+            },
+            {
+              "id": "mt-4.1.3",
+              "name": "Create local cache for waste schedules",
+              "description": "Store parsed data for 24-hour refresh",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test cache operations",
+                  "file": "tests/test_waste.py::test_waste_cache"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-4.2",
+          "name": "Implement address-to-sector matching",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-4.2.1",
+              "name": "Implement point-in-polygon check",
+              "description": "Determine which sector contains user coordinates",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test point containment",
+                  "file": "tests/test_waste.py::test_point_in_polygon"
+                }
+              ]
+            },
+            {
+              "id": "mt-4.2.2",
+              "name": "Get coordinates from address",
+              "description": "Use Geobase centroids or geocoding service",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test coordinate lookup",
+                  "file": "tests/test_waste.py::test_address_to_coords"
+                }
+              ]
+            },
+            {
+              "id": "mt-4.2.3",
+              "name": "Match address to all collection schedules",
+              "description": "Return schedule for each collection type",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test full schedule lookup",
+                  "file": "tests/test_waste.py::test_full_schedule_lookup"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-4.3",
+          "name": "Implement collection schedule parsing",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-4.3.1",
+              "name": "Parse collection day patterns",
+              "description": "Extract weekday, frequency from schedule messages",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test schedule pattern parsing",
+                  "file": "tests/test_waste.py::test_parse_schedule"
+                }
+              ]
+            },
+            {
+              "id": "mt-4.3.2",
+              "name": "Calculate next collection date",
+              "description": "Given pattern, compute next occurrence",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test next date calculation",
+                  "file": "tests/test_waste.py::test_next_collection_date"
+                }
+              ]
+            },
+            {
+              "id": "mt-4.3.3",
+              "name": "Handle holiday exceptions",
+              "description": "Adjust for statutory holidays",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test holiday adjustments",
+                  "file": "tests/test_waste.py::test_holiday_handling"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Email Alert System",
+      "estimated_hours": 5,
+      "tasks": [
+        {
+          "id": "task-5.1",
+          "name": "Set up Resend integration",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-5.1.1",
+              "name": "Configure Resend client",
+              "description": "Initialize with API key, set sender domain",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test client initialization",
+                  "file": "tests/test_email.py::test_resend_init"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.1.2",
+              "name": "Create email sending wrapper",
+              "description": "Abstraction for sending with error handling",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test send with mock",
+                  "file": "tests/test_email.py::test_send_email"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.1.3",
+              "name": "Implement retry logic",
+              "description": "Retry failed sends with exponential backoff",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test retry behavior",
+                  "file": "tests/test_email.py::test_send_retry"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-5.2",
+          "name": "Create email templates",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-5.2.1",
+              "name": "Create snow alert scheduled template",
+              "description": "Email for planifie status change",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test template rendering",
+                  "file": "tests/test_email.py::test_snow_scheduled_template"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.2.2",
+              "name": "Create snow alert urgent template",
+              "description": "Email for en_cours/red status",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test urgent template",
+                  "file": "tests/test_email.py::test_snow_urgent_template"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.2.3",
+              "name": "Create snow cleared template",
+              "description": "Email for deneige status",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test cleared template",
+                  "file": "tests/test_email.py::test_snow_cleared_template"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.2.4",
+              "name": "Create waste reminder template",
+              "description": "Email for collection reminder",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test waste template",
+                  "file": "tests/test_email.py::test_waste_template"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.2.5",
+              "name": "Add unsubscribe link to all templates",
+              "description": "Include one-click unsubscribe URL",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test unsubscribe link presence",
+                  "file": "tests/test_email.py::test_unsubscribe_link"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-5.3",
+          "name": "Implement alert dispatch logic",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-5.3.1",
+              "name": "Create alert dispatcher service",
+              "description": "Process status changes and send appropriate alerts",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test dispatcher routing",
+                  "file": "tests/test_alerts.py::test_dispatcher"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.3.2",
+              "name": "Implement duplicate alert prevention",
+              "description": "Don't send same alert twice in 24 hours",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test deduplication",
+                  "file": "tests/test_alerts.py::test_deduplication"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.3.3",
+              "name": "Log all sent alerts",
+              "description": "Track in AlertHistory table",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test alert logging",
+                  "file": "tests/test_alerts.py::test_alert_logging"
+                }
+              ]
+            },
+            {
+              "id": "mt-5.3.4",
+              "name": "Implement batch sending",
+              "description": "Send alerts in batches to respect API limits",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test batch sending",
+                  "file": "tests/test_alerts.py::test_batch_sending"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "Subscription Management",
+      "estimated_hours": 4,
+      "tasks": [
+        {
+          "id": "task-6.1",
+          "name": "Implement subscription API",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-6.1.1",
+              "name": "Create /api/subscribe endpoint",
+              "description": "Accept email and address, create subscriber",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test subscription flow",
+                  "file": "tests/test_routes.py::test_subscribe"
+                }
+              ]
+            },
+            {
+              "id": "mt-6.1.2",
+              "name": "Validate email format",
+              "description": "Reject invalid emails",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test email validation",
+                  "file": "tests/test_validation.py::test_email_format"
+                }
+              ]
+            },
+            {
+              "id": "mt-6.1.3",
+              "name": "Generate unsubscribe token",
+              "description": "Create unique token per subscriber",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test token generation",
+                  "file": "tests/test_subscription.py::test_token_generation"
+                }
+              ]
+            },
+            {
+              "id": "mt-6.1.4",
+              "name": "Send confirmation email",
+              "description": "Notify user of successful subscription",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test confirmation email",
+                  "file": "tests/test_subscription.py::test_confirmation_email"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-6.2",
+          "name": "Implement unsubscribe flow",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-6.2.1",
+              "name": "Create /unsubscribe/<token> endpoint",
+              "description": "One-click unsubscribe via GET request",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test unsubscribe flow",
+                  "file": "tests/test_routes.py::test_unsubscribe"
+                }
+              ]
+            },
+            {
+              "id": "mt-6.2.2",
+              "name": "Mark subscriber as inactive",
+              "description": "Set is_active=False, preserve data",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test soft delete",
+                  "file": "tests/test_subscription.py::test_soft_delete"
+                }
+              ]
+            },
+            {
+              "id": "mt-6.2.3",
+              "name": "Show confirmation page",
+              "description": "Display unsubscribe success message",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test confirmation page",
+                  "file": "tests/test_routes.py::test_unsubscribe_page"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-6.3",
+          "name": "Implement address management",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-6.3.1",
+              "name": "Support multiple addresses per subscriber",
+              "description": "Allow adding home, work, etc.",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test multiple addresses",
+                  "file": "tests/test_subscription.py::test_multiple_addresses"
+                }
+              ]
+            },
+            {
+              "id": "mt-6.3.2",
+              "name": "Create /api/addresses endpoint",
+              "description": "CRUD for subscriber addresses",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test address CRUD",
+                  "file": "tests/test_routes.py::test_address_crud"
+                }
+              ]
+            },
+            {
+              "id": "mt-6.3.3",
+              "name": "Limit addresses per subscriber",
+              "description": "Max 5 addresses per email",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test address limit",
+                  "file": "tests/test_subscription.py::test_address_limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-7",
+      "name": "Web Interface",
+      "estimated_hours": 5,
+      "tasks": [
+        {
+          "id": "task-7.1",
+          "name": "Create home page",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-7.1.1",
+              "name": "Design responsive HTML layout",
+              "description": "Mobile-first design with Tailwind CSS",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Visual regression test",
+                  "file": "tests/test_ui.py::test_home_page_layout"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.1.2",
+              "name": "Create address input with autocomplete",
+              "description": "JavaScript autocomplete connected to /api/address/search",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test autocomplete interaction",
+                  "file": "tests/test_ui.py::test_autocomplete"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.1.3",
+              "name": "Create geolocation button",
+              "description": "Use browser geolocation API",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test geolocation flow",
+                  "file": "tests/test_ui.py::test_geolocation"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.1.4",
+              "name": "Create email subscription form",
+              "description": "Form connected to /api/subscribe",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test subscription form",
+                  "file": "tests/test_ui.py::test_subscribe_form"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-7.2",
+          "name": "Create status display component",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-7.2.1",
+              "name": "Design status card layout",
+              "description": "Color-coded status with details",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test status card rendering",
+                  "file": "tests/test_ui.py::test_status_card"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.2.2",
+              "name": "Display snow removal status",
+              "description": "Show current status, dates, parking info",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test snow status display",
+                  "file": "tests/test_ui.py::test_snow_status"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.2.3",
+              "name": "Display waste collection schedule",
+              "description": "Show next collection dates by type",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test waste schedule display",
+                  "file": "tests/test_ui.py::test_waste_schedule"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.2.4",
+              "name": "Add loading and error states",
+              "description": "Spinner, error messages, retry button",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test loading and error states",
+                  "file": "tests/test_ui.py::test_loading_error_states"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-7.3",
+          "name": "Implement geolocation feature",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-7.3.1",
+              "name": "Request browser location permission",
+              "description": "Handle permission granted/denied",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test permission handling",
+                  "file": "tests/test_geolocation.py::test_permission"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.3.2",
+              "name": "Create reverse geocoding endpoint",
+              "description": "/api/geocode/reverse with lat/lon",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test reverse geocoding",
+                  "file": "tests/test_routes.py::test_reverse_geocode"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.3.3",
+              "name": "Match coordinates to nearest COTE_RUE_ID",
+              "description": "Find closest Geobase entry",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test coordinate matching",
+                  "file": "tests/test_geolocation.py::test_coord_to_cote"
+                }
+              ]
+            },
+            {
+              "id": "mt-7.3.4",
+              "name": "Provide fallback for denied/unavailable",
+              "description": "Prompt for manual address or postal code",
+              "tests": [
+                {
+                  "type": "e2e",
+                  "description": "Test fallback UI",
+                  "file": "tests/test_ui.py::test_geolocation_fallback"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-8",
+      "name": "Scheduler & Background Jobs",
+      "estimated_hours": 4,
+      "tasks": [
+        {
+          "id": "task-8.1",
+          "name": "Set up APScheduler",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-8.1.1",
+              "name": "Configure APScheduler with Flask",
+              "description": "Initialize scheduler in app factory",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test scheduler initialization",
+                  "file": "tests/test_scheduler.py::test_scheduler_init"
+                }
+              ]
+            },
+            {
+              "id": "mt-8.1.2",
+              "name": "Configure job persistence",
+              "description": "Store jobs in database for crash recovery",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test job persistence",
+                  "file": "tests/test_scheduler.py::test_job_persistence"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-8.2",
+          "name": "Implement scheduled jobs",
+          "estimated_hours": 2,
+          "microtasks": [
+            {
+              "id": "mt-8.2.1",
+              "name": "Create snow status check job",
+              "description": "Run every 10 minutes during winter",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test snow check job",
+                  "file": "tests/test_scheduler.py::test_snow_check_job"
+                }
+              ]
+            },
+            {
+              "id": "mt-8.2.2",
+              "name": "Create waste reminder job",
+              "description": "Run daily at 6 PM to send next-day reminders",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test waste reminder job",
+                  "file": "tests/test_scheduler.py::test_waste_reminder_job"
+                }
+              ]
+            },
+            {
+              "id": "mt-8.2.3",
+              "name": "Create Geobase refresh job",
+              "description": "Run weekly to update cached data",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test Geobase refresh job",
+                  "file": "tests/test_scheduler.py::test_geobase_refresh_job"
+                }
+              ]
+            },
+            {
+              "id": "mt-8.2.4",
+              "name": "Create waste schedule refresh job",
+              "description": "Run daily to update collection schedules",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test waste refresh job",
+                  "file": "tests/test_scheduler.py::test_waste_refresh_job"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-8.3",
+          "name": "Implement admin trigger endpoints",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-8.3.1",
+              "name": "Create /admin/trigger-snow-check endpoint",
+              "description": "Manually trigger snow status check",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test manual trigger",
+                  "file": "tests/test_routes.py::test_trigger_snow_check"
+                }
+              ]
+            },
+            {
+              "id": "mt-8.3.2",
+              "name": "Create /admin/trigger-waste-check endpoint",
+              "description": "Manually trigger waste reminders",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test manual trigger",
+                  "file": "tests/test_routes.py::test_trigger_waste_check"
+                }
+              ]
+            },
+            {
+              "id": "mt-8.3.3",
+              "name": "Add basic auth protection",
+              "description": "Protect admin endpoints",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test auth protection",
+                  "file": "tests/test_routes.py::test_admin_auth"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-9",
+      "name": "Deployment & CI/CD",
+      "estimated_hours": 3,
+      "tasks": [
+        {
+          "id": "task-9.1",
+          "name": "Configure Render deployment",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-9.1.1",
+              "name": "Create render.yaml",
+              "description": "Define web service configuration",
+              "tests": [
+                {
+                  "type": "manual",
+                  "description": "Verify deployment succeeds"
+                }
+              ]
+            },
+            {
+              "id": "mt-9.1.2",
+              "name": "Configure environment variables",
+              "description": "Set RESEND_API_KEY, DATABASE_URL, etc.",
+              "tests": [
+                {
+                  "type": "manual",
+                  "description": "Verify env vars are set"
+                }
+              ]
+            },
+            {
+              "id": "mt-9.1.3",
+              "name": "Set up PostgreSQL database",
+              "description": "Create Render PostgreSQL instance",
+              "tests": [
+                {
+                  "type": "manual",
+                  "description": "Verify database connection"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-9.2",
+          "name": "Set up GitHub Actions",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-9.2.1",
+              "name": "Create CI workflow",
+              "description": "Run tests on push/PR",
+              "tests": [
+                {
+                  "type": "manual",
+                  "description": "Verify CI passes"
+                }
+              ]
+            },
+            {
+              "id": "mt-9.2.2",
+              "name": "Create scheduled trigger workflow",
+              "description": "Wake server and trigger checks (like snow-alert)",
+              "tests": [
+                {
+                  "type": "manual",
+                  "description": "Verify scheduled runs"
+                }
+              ]
+            },
+            {
+              "id": "mt-9.2.3",
+              "name": "Configure GitHub secrets",
+              "description": "Add RENDER_URL secret",
+              "tests": [
+                {
+                  "type": "manual",
+                  "description": "Verify secrets are accessible"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-9.3",
+          "name": "Configure monitoring",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-9.3.1",
+              "name": "Add health check endpoint",
+              "description": "/health returns 200 OK",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Test health endpoint",
+                  "file": "tests/test_routes.py::test_health_check"
+                }
+              ]
+            },
+            {
+              "id": "mt-9.3.2",
+              "name": "Configure logging",
+              "description": "Structured logs for debugging",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test log output",
+                  "file": "tests/test_logging.py::test_log_format"
+                }
+              ]
+            },
+            {
+              "id": "mt-9.3.3",
+              "name": "Add error tracking",
+              "description": "Log errors with context",
+              "tests": [
+                {
+                  "type": "unit",
+                  "description": "Test error logging",
+                  "file": "tests/test_logging.py::test_error_tracking"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-10",
+      "name": "Testing & QA",
+      "estimated_hours": 2,
+      "tasks": [
+        {
+          "id": "task-10.1",
+          "name": "Integration testing",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-10.1.1",
+              "name": "Test full subscription flow",
+              "description": "Subscribe → receive alert → unsubscribe",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Full flow test",
+                  "file": "tests/test_integration.py::test_subscription_flow"
+                }
+              ]
+            },
+            {
+              "id": "mt-10.1.2",
+              "name": "Test status check flow",
+              "description": "Address → COTE_RUE_ID → API → status",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Status check flow test",
+                  "file": "tests/test_integration.py::test_status_check_flow"
+                }
+              ]
+            },
+            {
+              "id": "mt-10.1.3",
+              "name": "Test alert dispatch flow",
+              "description": "Status change → email sent",
+              "tests": [
+                {
+                  "type": "integration",
+                  "description": "Alert dispatch flow test",
+                  "file": "tests/test_integration.py::test_alert_dispatch_flow"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "task-10.2",
+          "name": "Load testing",
+          "estimated_hours": 1,
+          "microtasks": [
+            {
+              "id": "mt-10.2.1",
+              "name": "Test concurrent status checks",
+              "description": "100 concurrent requests",
+              "tests": [
+                {
+                  "type": "load",
+                  "description": "Concurrent request test",
+                  "file": "tests/test_load.py::test_concurrent_status"
+                }
+              ]
+            },
+            {
+              "id": "mt-10.2.2",
+              "name": "Test email batch sending",
+              "description": "1000 emails in batch",
+              "tests": [
+                {
+                  "type": "load",
+                  "description": "Batch email test",
+                  "file": "tests/test_load.py::test_batch_emails"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "dependencies": {
+    "external": [
+      {
+        "name": "Planif-Neige API",
+        "url": "https://servicesenligne2.ville.montreal.qc.ca/api/infoneige/",
+        "type": "SOAP/WSDL",
+        "auth": "None (public)",
+        "rate_limit": "1 request per 5 minutes"
+      },
+      {
+        "name": "Geobase Double",
+        "url": "https://donnees.montreal.ca/dataset/geobase-double",
+        "type": "JSON/CSV download",
+        "auth": "None",
+        "size": "74.7 MB (JSON)"
+      },
+      {
+        "name": "Waste Collection Data",
+        "url": "https://donnees.montreal.ca/dataset/2df0fa28-7a7b-46c6-912f-93b215bd201e",
+        "type": "GEOJSON",
+        "auth": "None"
+      },
+      {
+        "name": "Resend",
+        "url": "https://resend.com",
+        "type": "REST API",
+        "auth": "API Key"
+      }
+    ],
+    "python_packages": [
+      "Flask>=3.0.0",
+      "Flask-SQLAlchemy>=3.1.0",
+      "Flask-Migrate>=4.0.0",
+      "APScheduler>=3.10.0",
+      "zeep>=4.2.0",
+      "resend>=0.7.0",
+      "python-dotenv>=1.0.0",
+      "requests>=2.31.0",
+      "shapely>=2.0.0",
+      "pytest>=7.4.0",
+      "pytest-flask>=1.3.0"
+    ]
+  },
+  "risks": [
+    {
+      "id": "risk-1",
+      "description": "Planif-Neige API rate limiting (1 req/5 min)",
+      "probability": "high",
+      "impact": "medium",
+      "mitigation": "Batch queries using GetPlanificationsForDate, aggressive caching"
+    },
+    {
+      "id": "risk-2",
+      "description": "Geobase data structure changes",
+      "probability": "medium",
+      "impact": "high",
+      "mitigation": "Weekly sync, validation checks, graceful degradation"
+    },
+    {
+      "id": "risk-3",
+      "description": "SOAP API deprecation in favor of REST",
+      "probability": "low",
+      "impact": "high",
+      "mitigation": "Monitor Montreal's open data announcements"
+    },
+    {
+      "id": "risk-4",
+      "description": "Large Geobase file (74MB) slows deployment",
+      "probability": "medium",
+      "impact": "low",
+      "mitigation": "Use CSV format (5.3MB), lazy loading"
+    },
+    {
+      "id": "risk-5",
+      "description": "Render free tier spin-down delays alerts",
+      "probability": "high",
+      "impact": "medium",
+      "mitigation": "GitHub Actions wake-up job 4 min before triggers"
+    }
+  ],
+  "timeline_summary": {
+    "total_estimated_hours": 45,
+    "phases_breakdown": {
+      "phase-1": { "name": "Project Setup", "hours": 3 },
+      "phase-2": { "name": "Geobase Integration", "hours": 6 },
+      "phase-3": { "name": "Planif-Neige Integration", "hours": 8 },
+      "phase-4": { "name": "Waste Collection", "hours": 5 },
+      "phase-5": { "name": "Email Alerts", "hours": 5 },
+      "phase-6": { "name": "Subscriptions", "hours": 4 },
+      "phase-7": { "name": "Web Interface", "hours": 5 },
+      "phase-8": { "name": "Scheduler", "hours": 4 },
+      "phase-9": { "name": "Deployment", "hours": 3 },
+      "phase-10": { "name": "Testing & QA", "hours": 2 }
+    }
+  }
+}

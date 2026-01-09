@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Alert MTL{% endblock %}</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom styles -->
+    <style>
+        .status-blue { background-color: #3B82F6; }
+        .status-orange { background-color: #F97316; }
+        .status-purple { background-color: #8B5CF6; }
+        .status-green { background-color: #22C55E; }
+        .status-red { background-color: #EF4444; }
+        .status-yellow { background-color: #EAB308; }
+        .status-gray { background-color: #6B7280; }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3B82F6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-2xl font-bold">
+                <a href="/" class="hover:text-blue-200">Alert MTL</a>
+            </h1>
+            <p class="text-blue-200 text-sm">Snow Removal & Waste Collection Alerts</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center text-sm">
+            <p>Alert MTL - Montreal Snow & Waste Alerts</p>
+            <p class="mt-2">
+                Data from <a href="https://donnees.montreal.ca" class="text-blue-400 hover:underline">Montreal Open Data</a>
+                (CC BY 4.0)
+            </p>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
