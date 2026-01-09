@@ -234,8 +234,8 @@ def reverse_geocode():
 
 @api_bp.route('/geocode/postal-code')
 @limiter.limit("30 per minute")
-def geocode_postal_code():
-    """Convert postal code to coordinates and find nearest street."""
+def geocode_postal_code_endpoint():
+    """Convert postal code to coordinates."""
     postal_code = request.args.get('postal_code', '').strip().upper()
 
     if not postal_code:
@@ -246,50 +246,145 @@ def geocode_postal_code():
     if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code):
         return jsonify({'error': 'Invalid postal code format'}), 400
 
-    # Format with space
+    # Check if it's a Montreal postal code
+    if not postal_code.startswith('H'):
+        return jsonify({'error': 'This postal code is not in Montreal (must start with H)'}), 400
+
     formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
+    fsa = postal_code[:3]
 
     try:
-        import requests as req
+        lat, lon, location_name = None, None, None
 
-        # Use Nominatim (OpenStreetMap) for geocoding
-        geocode_url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            'postalcode': formatted_postal,
-            'country': 'Canada',
-            'format': 'json',
-            'limit': 1
-        }
-        headers = {'User-Agent': 'AlertMTL/1.0'}
+        # Try Nominatim first
+        lat, lon, location_name = geocode_postal_code_nominatim(postal_code)
 
-        response = req.get(geocode_url, params=params, headers=headers, timeout=10)
-        response.raise_for_status()
-        results = response.json()
+        # Fallback to FSA lookup table
+        if lat is None and fsa in MONTREAL_FSA_COORDS:
+            lat, lon = MONTREAL_FSA_COORDS[fsa]
+            location_name = f"Montreal ({fsa})"
 
-        if not results:
-            return jsonify({'error': 'Postal code not found'}), 404
-
-        lat = float(results[0]['lat'])
-        lon = float(results[0]['lon'])
-
-        # Check if it's in Montreal area
-        if not (45.4 <= lat <= 45.7 and -73.9 <= lon <= -73.4):
-            return jsonify({'error': 'This postal code is not in Montreal'}), 400
-
-        # Find nearest street from Geobase
-        from app.services.geobase import search_addresses
-        streets = search_addresses("", limit=5)
+        if lat is None:
+            return jsonify({'error': 'Could not locate this postal code'}), 404
 
         return jsonify({
             'postal_code': formatted_postal,
             'latitude': lat,
             'longitude': lon,
-            'display_name': results[0].get('display_name', formatted_postal)
+            'display_name': location_name or formatted_postal
         })
 
     except Exception as e:
         logger.error(f"Error geocoding postal code: {e}")
         return jsonify({'error': 'Failed to geocode postal code'}), 500
+
+
+def geocode_postal_code_nominatim(postal_code):
+    """Try to geocode a Canadian postal code using Nominatim."""
+    import requests as req
+
+    formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
+    headers = {'User-Agent': 'AlertMTL/1.0 (Montreal snow/waste alerts)'}
+
+    # Try 1: Full postal code with city context
+    try:
+        response = req.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                'q': f"{formatted_postal}, Montreal, Quebec, Canada",
+                'format': 'json',
+                'limit': 1
+            },
+            headers=headers,
+            timeout=10
+        )
+        results = response.json()
+        if results:
+            return float(results[0]['lat']), float(results[0]['lon']), results[0].get('display_name', formatted_postal)
+    except:
+        pass
+
+    # Try 2: Just postal code with country
+    try:
+        response = req.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                'postalcode': formatted_postal,
+                'country': 'Canada',
+                'format': 'json',
+                'limit': 1
+            },
+            headers=headers,
+            timeout=10
+        )
+        results = response.json()
+        if results:
+            return float(results[0]['lat']), float(results[0]['lon']), results[0].get('display_name', formatted_postal)
+    except:
+        pass
+
+    # Try 3: FSA only (first 3 chars) - broader area
+    fsa = postal_code[:3]
+    try:
+        response = req.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                'q': f"{fsa}, Montreal, Quebec, Canada",
+                'format': 'json',
+                'limit': 1
+            },
+            headers=headers,
+            timeout=10
+        )
+        results = response.json()
+        if results:
+            return float(results[0]['lat']), float(results[0]['lon']), f"Montreal ({fsa})"
+    except:
+        pass
+
+    return None, None, None
+
+
+# Montreal FSA (Forward Sortation Area) approximate coordinates
+# These are the first 3 characters of Montreal postal codes
+MONTREAL_FSA_COORDS = {
+    'H1A': (45.6205, -73.6049), 'H1B': (45.6275, -73.5699), 'H1C': (45.6153, -73.5486),
+    'H1E': (45.6359, -73.5879), 'H1G': (45.5902, -73.6139), 'H1H': (45.5753, -73.6249),
+    'H1J': (45.6051, -73.5651), 'H1K': (45.5909, -73.5761), 'H1L': (45.5826, -73.5498),
+    'H1M': (45.5648, -73.5624), 'H1N': (45.5527, -73.5471), 'H1P': (45.5958, -73.6365),
+    'H1R': (45.5775, -73.6531), 'H1S': (45.5635, -73.6272), 'H1T': (45.5594, -73.6050),
+    'H1V': (45.5524, -73.5682), 'H1W': (45.5413, -73.5482), 'H1X': (45.5524, -73.5941),
+    'H1Y': (45.5405, -73.5772), 'H1Z': (45.5493, -73.6152),
+    'H2A': (45.5361, -73.6049), 'H2B': (45.5362, -73.6329), 'H2C': (45.5367, -73.6531),
+    'H2E': (45.5330, -73.5989), 'H2G': (45.5260, -73.5917), 'H2H': (45.5166, -73.5808),
+    'H2J': (45.5245, -73.5690), 'H2K': (45.5328, -73.5536), 'H2L': (45.5187, -73.5614),
+    'H2M': (45.5369, -73.6501), 'H2N': (45.5325, -73.6696), 'H2P': (45.5306, -73.6213),
+    'H2R': (45.5257, -73.6167), 'H2S': (45.5232, -73.6056), 'H2T': (45.5188, -73.5918),
+    'H2V': (45.5188, -73.6084), 'H2W': (45.5131, -73.5790), 'H2X': (45.5088, -73.5696),
+    'H2Y': (45.5047, -73.5556), 'H2Z': (45.5044, -73.5621),
+    'H3A': (45.5029, -73.5793), 'H3B': (45.4999, -73.5704), 'H3C': (45.4928, -73.5544),
+    'H3E': (45.4666, -73.5312), 'H3G': (45.4970, -73.5806), 'H3H': (45.4854, -73.5896),
+    'H3J': (45.4816, -73.5695), 'H3K': (45.4722, -73.5609), 'H3L': (45.5264, -73.6509),
+    'H3M': (45.5091, -73.6845), 'H3N': (45.5188, -73.6294), 'H3P': (45.5001, -73.6448),
+    'H3R': (45.4902, -73.6344), 'H3S': (45.4987, -73.6193), 'H3T': (45.5000, -73.6049),
+    'H3V': (45.4870, -73.6169), 'H3W': (45.4781, -73.6259), 'H3X': (45.4702, -73.6436),
+    'H3Y': (45.4811, -73.5923), 'H3Z': (45.4867, -73.5857),
+    'H4A': (45.4621, -73.6234), 'H4B': (45.4581, -73.6400), 'H4C': (45.4648, -73.5998),
+    'H4E': (45.4554, -73.5808), 'H4G': (45.4627, -73.5655), 'H4H': (45.4623, -73.5519),
+    'H4J': (45.5057, -73.6644), 'H4K': (45.5151, -73.6783), 'H4L': (45.5217, -73.6942),
+    'H4M': (45.5134, -73.7121), 'H4N': (45.5014, -73.6783), 'H4P': (45.4919, -73.6609),
+    'H4R': (45.4873, -73.6917), 'H4S': (45.4730, -73.6894), 'H4T': (45.4868, -73.6681),
+    'H4V': (45.4589, -73.6190), 'H4W': (45.4494, -73.6408), 'H4X': (45.4414, -73.6329),
+    'H4Y': (45.4567, -73.6600), 'H4Z': (45.5011, -73.5686),
+    'H5A': (45.5004, -73.5632), 'H5B': (45.5054, -73.5587),
+    'H8N': (45.4384, -73.6131), 'H8P': (45.4290, -73.6255), 'H8R': (45.4327, -73.6506),
+    'H8S': (45.4449, -73.6565), 'H8T': (45.4508, -73.6772), 'H8Y': (45.4628, -73.6843),
+    'H8Z': (45.4536, -73.6986), 'H9A': (45.4649, -73.7313), 'H9B': (45.4579, -73.7501),
+    'H9C': (45.4430, -73.7419), 'H9E': (45.4318, -73.7089), 'H9G': (45.4332, -73.7342),
+    'H9H': (45.4529, -73.7655), 'H9J': (45.4427, -73.7620), 'H9K': (45.4340, -73.7554),
+    'H9P': (45.4663, -73.7495), 'H9R': (45.4761, -73.7667), 'H9S': (45.4869, -73.7720),
+    'H9W': (45.4283, -73.7731), 'H9X': (45.4155, -73.8002),
+}
 
 
 @api_bp.route('/quick-check/<postal_code>')
@@ -302,39 +397,34 @@ def quick_check(postal_code):
         return jsonify({'error': 'Invalid postal code format'}), 400
 
     formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
+    fsa = postal_code[:3]
+
+    # Check if it's a Montreal postal code (starts with H)
+    if not postal_code.startswith('H'):
+        return jsonify({'error': 'This postal code is not in Montreal (must start with H)'}), 400
 
     try:
-        import requests as req
+        lat, lon, location_name = None, None, None
 
-        # Geocode the postal code
-        geocode_url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            'postalcode': formatted_postal,
-            'country': 'Canada',
-            'format': 'json',
-            'limit': 1
-        }
-        headers = {'User-Agent': 'AlertMTL/1.0'}
+        # Try Nominatim first
+        lat, lon, location_name = geocode_postal_code_nominatim(postal_code)
 
-        response = req.get(geocode_url, params=params, headers=headers, timeout=10)
-        response.raise_for_status()
-        results = response.json()
+        # Fallback to FSA lookup table
+        if lat is None and fsa in MONTREAL_FSA_COORDS:
+            lat, lon = MONTREAL_FSA_COORDS[fsa]
+            location_name = f"Montreal ({fsa})"
 
-        if not results:
-            return jsonify({'error': 'Postal code not found'}), 404
+        if lat is None:
+            return jsonify({'error': 'Could not locate this postal code'}), 404
 
-        lat = float(results[0]['lat'])
-        lon = float(results[0]['lon'])
+        # Check Montreal bounds (expanded)
+        if not (45.3 <= lat <= 45.8 and -74.0 <= lon <= -73.3):
+            return jsonify({'error': 'This postal code is not in Montreal area'}), 400
 
-        # Check Montreal bounds
-        if not (45.4 <= lat <= 45.7 and -73.9 <= lon <= -73.4):
-            return jsonify({'error': 'This postal code is not in Montreal'}), 400
-
-        # Get snow status for a sample street (in production, find nearest)
+        # Get snow status
         from app.services.planif_neige import get_status_for_street
-        from app.services.geobase import GeobaseCache
+        from app.models import GeobaseCache
 
-        # Find a street segment near these coordinates
         entry = GeobaseCache.query.first()
         snow_status = None
 
@@ -358,7 +448,7 @@ def quick_check(postal_code):
             'longitude': lon,
             'snow_status': snow_status or {'message': 'No data available'},
             'waste_schedule': waste_schedule,
-            'location_name': results[0].get('display_name', formatted_postal)
+            'location_name': location_name or formatted_postal
         })
 
     except Exception as e:
