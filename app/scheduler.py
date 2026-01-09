@@ -8,22 +8,18 @@ import logging
 from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from flask import Flask
 
 logger = logging.getLogger(__name__)
 
-scheduler = BackgroundScheduler()
+scheduler = None
 
 
 def init_scheduler(app: Flask):
     """Initialize the scheduler with the Flask app."""
-    # Configure job store for persistence
-    jobstores = {
-        'default': SQLAlchemyJobStore(url=app.config.get('SQLALCHEMY_DATABASE_URI'))
-    }
+    global scheduler
 
-    scheduler.configure(jobstores=jobstores)
+    scheduler = BackgroundScheduler()
 
     # Add jobs
     add_scheduled_jobs(app)
@@ -37,8 +33,6 @@ def init_scheduler(app: Flask):
 def add_scheduled_jobs(app: Flask):
     """Add all scheduled jobs."""
 
-    # Snow status check - every 10 minutes during winter months
-    @scheduler.scheduled_job('cron', minute='*/10', id='snow_check', replace_existing=True)
     def snow_check_job():
         with app.app_context():
             try:
@@ -49,8 +43,6 @@ def add_scheduled_jobs(app: Flask):
             except Exception as e:
                 logger.error(f"Snow check job failed: {e}")
 
-    # Waste reminders - daily at 6 PM Eastern
-    @scheduler.scheduled_job('cron', hour=18, minute=0, id='waste_reminder', replace_existing=True)
     def waste_reminder_job():
         with app.app_context():
             try:
@@ -61,8 +53,6 @@ def add_scheduled_jobs(app: Flask):
             except Exception as e:
                 logger.error(f"Waste reminder job failed: {e}")
 
-    # Geobase refresh - weekly on Sunday at 3 AM
-    @scheduler.scheduled_job('cron', day_of_week='sun', hour=3, id='geobase_refresh', replace_existing=True)
     def geobase_refresh_job():
         with app.app_context():
             try:
@@ -72,6 +62,11 @@ def add_scheduled_jobs(app: Flask):
                 logger.info(f"Geobase refresh complete: {result}")
             except Exception as e:
                 logger.error(f"Geobase refresh job failed: {e}")
+
+    # Add jobs using add_job method
+    scheduler.add_job(snow_check_job, 'cron', minute='*/10', id='snow_check', replace_existing=True)
+    scheduler.add_job(waste_reminder_job, 'cron', hour=18, minute=0, id='waste_reminder', replace_existing=True)
+    scheduler.add_job(geobase_refresh_job, 'cron', day_of_week='sun', hour=3, id='geobase_refresh', replace_existing=True)
 
     logger.info("Scheduled jobs configured: snow_check (10min), waste_reminder (daily 6PM), geobase_refresh (weekly)")
 
