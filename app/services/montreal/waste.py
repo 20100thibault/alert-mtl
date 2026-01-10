@@ -217,40 +217,45 @@ def adjust_for_holiday(collection_date: datetime) -> datetime:
 
 def get_schedule_for_location(lat: float, lon: float) -> Optional[Dict[str, Any]]:
     """Get complete waste collection schedule for a location."""
-    waste_data = load_all_waste_data()
+    try:
+        waste_data = load_all_waste_data()
 
-    if not waste_data:
-        # Return mock data for testing when real data isn't available
-        logger.warning("Using mock waste schedule data")
+        if not waste_data:
+            # Return mock data for testing when real data isn't available
+            logger.warning("Using mock waste schedule data - no waste data loaded")
+            return get_mock_schedule()
+
+        schedule = {}
+
+        for collection_type, geojson in waste_data.items():
+            sector = find_sector_for_point(lon, lat, geojson)
+
+            if sector:
+                parsed = parse_collection_schedule(sector)
+
+                # Calculate next collection date
+                if parsed.get('day_of_week'):
+                    next_date = get_next_collection_date(parsed['day_of_week'])
+                    parsed['next_collection'] = next_date.strftime('%Y-%m-%d')
+                    parsed['next_collection_display'] = format_date_display(next_date)
+
+                dataset_info = WASTE_DATASETS[collection_type]
+                parsed['type'] = collection_type
+                parsed['name'] = dataset_info['name']
+                parsed['name_fr'] = dataset_info['name_fr']
+
+                schedule[collection_type] = parsed
+
+        # If no schedule found (point not in any polygon), fall back to mock data
+        if not schedule:
+            logger.warning(f"No waste sector found for coordinates ({lat}, {lon}), using mock schedule")
+            return get_mock_schedule()
+
+        return schedule
+
+    except Exception as e:
+        logger.error(f"Error getting waste schedule for ({lat}, {lon}): {e}")
         return get_mock_schedule()
-
-    schedule = {}
-
-    for collection_type, geojson in waste_data.items():
-        sector = find_sector_for_point(lon, lat, geojson)
-
-        if sector:
-            parsed = parse_collection_schedule(sector)
-
-            # Calculate next collection date
-            if parsed.get('day_of_week'):
-                next_date = get_next_collection_date(parsed['day_of_week'])
-                parsed['next_collection'] = next_date.strftime('%Y-%m-%d')
-                parsed['next_collection_display'] = format_date_display(next_date)
-
-            dataset_info = WASTE_DATASETS[collection_type]
-            parsed['type'] = collection_type
-            parsed['name'] = dataset_info['name']
-            parsed['name_fr'] = dataset_info['name_fr']
-
-            schedule[collection_type] = parsed
-
-    # If no schedule found (point not in any polygon), fall back to mock data
-    if not schedule:
-        logger.warning(f"No waste sector found for coordinates ({lat}, {lon}), using mock schedule")
-        return get_mock_schedule()
-
-    return schedule
 
 
 def get_mock_schedule() -> Dict[str, Any]:

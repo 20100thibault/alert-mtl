@@ -60,7 +60,6 @@ def _get_montreal_snow_status(postal_code: str = None, lat: float = None, lon: f
     """Get snow status from Montreal Planif-Neige service."""
     try:
         from app.services.montreal.planif_neige import get_status_for_street
-        from app.services.montreal.geobase import lookup_cote_rue_id
 
         # If we have coordinates, try to find the cote_rue_id
         if lat and lon:
@@ -209,7 +208,8 @@ def _get_quebec_waste_schedule(waste_zone_id: int = None, postal_code: str = Non
 
     except Exception as e:
         logger.error(f"Quebec waste schedule error: {e}")
-        return None
+        # Fall back to default schedule on any error
+        return _get_quebec_default_schedule(postal_code)
 
 
 def _get_quebec_zone_from_postal(postal_code: str) -> Optional[str]:
