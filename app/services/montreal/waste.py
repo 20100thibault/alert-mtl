@@ -245,7 +245,12 @@ def get_schedule_for_location(lat: float, lon: float) -> Optional[Dict[str, Any]
 
             schedule[collection_type] = parsed
 
-    return schedule if schedule else None
+    # If no schedule found (point not in any polygon), fall back to mock data
+    if not schedule:
+        logger.warning(f"No waste sector found for coordinates ({lat}, {lon}), using mock schedule")
+        return get_mock_schedule()
+
+    return schedule
 
 
 def get_mock_schedule() -> Dict[str, Any]:

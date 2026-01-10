@@ -1368,11 +1368,18 @@
 
             // Waste schedule
             if (data.waste_schedule) {
+                // Only show valid waste collection types (filter out metadata like zone_code, zone_description)
+                const validWasteTypes = ['garbage', 'recycling', 'organic', 'green'];
                 for (const [type, schedule] of Object.entries(data.waste_schedule)) {
+                    // Skip non-waste-type entries (metadata fields)
+                    if (!validWasteTypes.includes(type) || !schedule || typeof schedule !== 'object' || !schedule.name) {
+                        continue;
+                    }
                     const wasteCard = document.createElement('div');
                     wasteCard.className = 'result-card waste';
+                    const icon = type === 'garbage' ? '🗑️' : (type === 'recycling' ? '♻️' : (type === 'organic' ? '🍂' : '🌿'));
                     wasteCard.innerHTML = `
-                        <div class="result-card-icon">${type === 'garbage' ? '🗑️' : '♻️'}</div>
+                        <div class="result-card-icon">${icon}</div>
                         <div class="result-card-content">
                             <div class="result-card-label">${schedule.name}</div>
                             <div class="result-card-value">${schedule.next_collection_display || schedule.day_of_week || 'Schedule available'}</div>
