@@ -263,7 +263,7 @@ def quick_check(postal_code):
         # Get waste schedule
         waste_schedule = None
         try:
-            waste_schedule = service_get_waste_schedule(city=city, lat=lat, lon=lon)
+            waste_schedule = service_get_waste_schedule(city=city, postal_code=postal_code, lat=lat, lon=lon)
         except Exception as e:
             logger.warning(f"Could not get waste schedule: {e}")
 
