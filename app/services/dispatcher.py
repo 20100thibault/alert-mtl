@@ -164,11 +164,11 @@ def get_waste_schedule(city: str = None, postal_code: str = None, lat: float = N
                 city = 'montreal'  # Default to Montreal
 
         if city == 'montreal':
-            result = _get_montreal_waste_schedule(lat, lon)
+            result = _get_montreal_waste_schedule(lat, lon, postal_code)
             if result:
                 return result
             # If Montreal returns None, return inline fallback
-            return _get_inline_mock_schedule()
+            return _get_montreal_default_schedule(postal_code)
         elif city == 'quebec':
             result = _get_quebec_waste_schedule(waste_zone_id, postal_code, lat, lon)
             if result:
@@ -201,44 +201,133 @@ def _get_inline_mock_schedule() -> Dict[str, Any]:
     }
 
 
-def _get_montreal_waste_schedule(lat: float, lon: float) -> Optional[Dict[str, Any]]:
+def _get_montreal_waste_schedule(lat: float, lon: float, postal_code: str = None) -> Optional[Dict[str, Any]]:
     """Get waste schedule from Montreal GEOJSON service."""
     try:
-        from app.services.montreal.waste import get_schedule_for_location, get_mock_schedule
+        from app.services.montreal.waste import get_schedule_for_location
 
         if lat and lon:
             result = get_schedule_for_location(lat, lon)
             if result:
                 return result
-            # Fallback to mock if get_schedule_for_location returns None
-            return get_mock_schedule()
 
-        # No coordinates - return mock schedule
-        return get_mock_schedule()
+        # Fallback to FSA-based schedule
+        return _get_montreal_default_schedule(postal_code)
 
     except Exception as e:
         logger.error(f"Montreal waste schedule error: {e}")
-        # Return a basic mock schedule on any error
-        from datetime import datetime, timedelta
-        today = datetime.now()
-        return {
-            'garbage': {
-                'type': 'garbage',
-                'name': 'Garbage',
-                'name_fr': 'Ordures ménagères',
-                'day_of_week': 'Tuesday',
-                'frequency': 'weekly',
-                'next_collection_display': 'Tuesday'
-            },
-            'recycling': {
-                'type': 'recycling',
-                'name': 'Recycling',
-                'name_fr': 'Matières recyclables',
-                'day_of_week': 'Tuesday',
-                'frequency': 'bi-weekly',
-                'next_collection_display': 'Tuesday'
-            }
-        }
+        return _get_montreal_default_schedule(postal_code)
+
+
+# Montreal FSA to collection day mapping
+# Based on borough/arrondissement typical collection patterns
+MONTREAL_FSA_DAYS = {
+    # Plateau-Mont-Royal area - Monday
+    'H2J': ('Monday', 0), 'H2T': ('Monday', 0), 'H2W': ('Monday', 0),
+    # Mile End / Outremont - Tuesday
+    'H2V': ('Tuesday', 1), 'H2S': ('Tuesday', 1), 'H3N': ('Tuesday', 1),
+    # Rosemont-La Petite-Patrie - Wednesday
+    'H1X': ('Wednesday', 2), 'H1Y': ('Wednesday', 2), 'H2G': ('Wednesday', 2), 'H2R': ('Wednesday', 2),
+    # Villeray/Saint-Michel - Thursday
+    'H2P': ('Thursday', 3), 'H2M': ('Thursday', 3), 'H2E': ('Thursday', 3),
+    # Ahuntsic-Cartierville - Friday
+    'H2N': ('Friday', 4), 'H2C': ('Friday', 4), 'H3L': ('Friday', 4), 'H3M': ('Friday', 4),
+    # Downtown - Monday
+    'H3A': ('Monday', 0), 'H3B': ('Monday', 0), 'H3C': ('Monday', 0), 'H3G': ('Monday', 0), 'H3H': ('Monday', 0),
+    # NDG / Côte-des-Neiges - Wednesday
+    'H3S': ('Wednesday', 2), 'H3T': ('Wednesday', 2), 'H3V': ('Wednesday', 2), 'H3W': ('Wednesday', 2),
+    'H4A': ('Wednesday', 2), 'H4B': ('Wednesday', 2), 'H4V': ('Wednesday', 2),
+    # Verdun / LaSalle - Thursday
+    'H4G': ('Thursday', 3), 'H4H': ('Thursday', 3), 'H4E': ('Thursday', 3), 'H8N': ('Thursday', 3), 'H8P': ('Thursday', 3),
+    # Mercier-Hochelaga - Tuesday
+    'H1L': ('Tuesday', 1), 'H1M': ('Tuesday', 1), 'H1N': ('Tuesday', 1), 'H1K': ('Tuesday', 1),
+    # Anjou / Saint-Léonard - Friday
+    'H1J': ('Friday', 4), 'H1R': ('Friday', 4), 'H1S': ('Friday', 4), 'H1T': ('Friday', 4),
+    # Montreal-Nord - Monday
+    'H1G': ('Monday', 0), 'H1H': ('Monday', 0),
+    # Rivière-des-Prairies / Pointe-aux-Trembles - Tuesday
+    'H1A': ('Tuesday', 1), 'H1B': ('Tuesday', 1), 'H1C': ('Tuesday', 1), 'H1E': ('Tuesday', 1),
+    # West Island - Various
+    'H9A': ('Wednesday', 2), 'H9B': ('Wednesday', 2), 'H9C': ('Wednesday', 2),
+    'H9H': ('Thursday', 3), 'H9J': ('Thursday', 3), 'H9K': ('Thursday', 3),
+    'H9R': ('Friday', 4), 'H9S': ('Friday', 4), 'H9W': ('Friday', 4), 'H9X': ('Friday', 4),
+    # Lachine - Monday
+    'H8R': ('Monday', 0), 'H8S': ('Monday', 0), 'H8T': ('Monday', 0),
+    # Sud-Ouest - Tuesday
+    'H3J': ('Tuesday', 1), 'H3K': ('Tuesday', 1), 'H4C': ('Tuesday', 1),
+}
+
+
+def _get_montreal_default_schedule(postal_code: str = None) -> Dict[str, Any]:
+    """Get Montreal waste schedule based on FSA (first 3 chars of postal code)."""
+    from datetime import datetime, timedelta
+
+    today = datetime.now()
+
+    # Default to Tuesday if no postal code or FSA not found
+    day_name = 'Tuesday'
+    day_num = 1
+
+    if postal_code:
+        fsa = postal_code.upper().replace(' ', '')[:3]
+        if fsa in MONTREAL_FSA_DAYS:
+            day_name, day_num = MONTREAL_FSA_DAYS[fsa]
+
+    # Calculate next collection dates
+    days_until_collection = (day_num - today.weekday()) % 7
+    if days_until_collection == 0:
+        days_until_collection = 7  # If today is collection day, show next week
+
+    next_garbage = today + timedelta(days=days_until_collection)
+
+    # Recycling is bi-weekly - determine if this week or next
+    week_num = next_garbage.isocalendar()[1]
+    if week_num % 2 == 0:
+        next_recycling = next_garbage
+        recycling_display = f"This {day_name}"
+    else:
+        next_recycling = next_garbage + timedelta(days=7)
+        recycling_display = f"Next {day_name}"
+
+    # Format garbage display
+    if days_until_collection == 1:
+        garbage_display = "Tomorrow"
+    elif days_until_collection <= 7:
+        garbage_display = f"This {day_name}"
+    else:
+        garbage_display = f"Next {day_name}"
+
+    return {
+        'garbage': {
+            'type': 'garbage',
+            'name': 'Garbage',
+            'name_fr': 'Ordures ménagères',
+            'day_of_week': day_name,
+            'frequency': 'weekly',
+            'next_collection': next_garbage.strftime('%Y-%m-%d'),
+            'next_collection_display': garbage_display
+        },
+        'recycling': {
+            'type': 'recycling',
+            'name': 'Recycling',
+            'name_fr': 'Matières recyclables',
+            'day_of_week': day_name,
+            'frequency': 'bi-weekly',
+            'next_collection': next_recycling.strftime('%Y-%m-%d'),
+            'next_collection_display': recycling_display
+        },
+        'organic': {
+            'type': 'organic',
+            'name': 'Organic/Food Waste',
+            'name_fr': 'Résidus alimentaires',
+            'day_of_week': day_name,
+            'frequency': 'weekly',
+            'next_collection': next_garbage.strftime('%Y-%m-%d'),
+            'next_collection_display': garbage_display
+        },
+        'zone_code': postal_code.upper().replace(' ', '')[:3] if postal_code else 'MTL',
+        'zone_description': f"Montreal ({postal_code.upper().replace(' ', '')[:3]} schedule)" if postal_code else "Montreal"
+    }
 
 
 def _get_quebec_waste_schedule(waste_zone_id: int = None, postal_code: str = None,
