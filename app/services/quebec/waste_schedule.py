@@ -79,7 +79,7 @@ def _extract_fsa(postal_code: str) -> Optional[str]:
 
 
 def _format_display(collection_date: datetime, day_name: str) -> str:
-    """Format the next collection date for display."""
+    """Format the next collection date for display (English)."""
     today = datetime.now().date()
     target = collection_date.date()
     days_diff = (target - today).days
@@ -92,6 +92,22 @@ def _format_display(collection_date: datetime, day_name: str) -> str:
         return f"This {day_name}"
     else:
         return f"Next {day_name}"
+
+
+def _format_display_fr(collection_date: datetime, day_name_fr: str) -> str:
+    """Format the next collection date for display (French)."""
+    today = datetime.now().date()
+    target = collection_date.date()
+    days_diff = (target - today).days
+
+    if days_diff == 0:
+        return "Aujourd'hui"
+    elif days_diff == 1:
+        return "Demain"
+    elif days_diff <= 7:
+        return f"Ce {day_name_fr}"
+    else:
+        return f"{day_name_fr} prochain"
 
 
 def _extract_hidden_fields(soup: BeautifulSoup) -> Dict[str, str]:
@@ -251,7 +267,8 @@ def _build_collection_info(
         "frequency": "bi-weekly",
         "frequency_fr": "aux deux semaines",
         "next_collection": next_date.strftime('%Y-%m-%d') if next_date else None,
-        "next_collection_display": _format_display(next_date, day_en) if next_date else day_en
+        "next_collection_display": _format_display(next_date, day_en) if next_date else day_en,
+        "next_collection_display_fr": _format_display_fr(next_date, day_fr) if next_date else day_fr
     }
 
 

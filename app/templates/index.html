@@ -1699,11 +1699,14 @@
                     const icon = type === 'garbage' ? '🗑️' : (type === 'recycling' ? '♻️' : (type === 'organic' ? '🍂' : '🌿'));
                     const wasteName = currentLanguage === 'fr' ? (schedule.name_fr || schedule.name) : schedule.name;
                     const wasteDay = currentLanguage === 'fr' ? (schedule.day_of_week_fr || schedule.day_of_week) : schedule.day_of_week;
+                    const wasteDisplay = currentLanguage === 'fr'
+                        ? (schedule.next_collection_display_fr || schedule.next_collection_display || wasteDay || '')
+                        : (schedule.next_collection_display || wasteDay || '');
                     wasteCard.innerHTML = `
                         <div class="result-card-icon">${icon}</div>
                         <div class="result-card-content">
                             <div class="result-card-label">${wasteName}</div>
-                            <div class="result-card-value">${schedule.next_collection_display || wasteDay || ''}</div>
+                            <div class="result-card-value">${wasteDisplay}</div>
                         </div>
                     `;
                     grid.appendChild(wasteCard);

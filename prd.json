@@ -1530,6 +1530,242 @@
           ]
         }
       ]
+    },
+    {
+      "id": "phase-16",
+      "name": "Browser E2E Tests (Chrome Automation)",
+      "description": "Manual browser tests to verify live site functionality",
+      "site_url": "https://alert-mtl-1.onrender.com/",
+      "tasks": [
+        {
+          "id": "task-16.1",
+          "name": "Language Toggle Tests",
+          "microtasks": [
+            {
+              "id": "e2e-16.1.1",
+              "name": "Verify language toggle is visible in header",
+              "steps": ["Navigate to site", "Look for EN/FR toggle in top-right"],
+              "expected": "Two buttons (EN/FR) visible in header area"
+            },
+            {
+              "id": "e2e-16.1.2",
+              "name": "Test switching to French",
+              "steps": ["Click FR button"],
+              "expected": "Page title changes to 'Alerte Québec', all text translates to French"
+            },
+            {
+              "id": "e2e-16.1.3",
+              "name": "Test switching back to English",
+              "steps": ["Click EN button"],
+              "expected": "Page title changes to 'Alert Quebec', all text translates to English"
+            },
+            {
+              "id": "e2e-16.1.4",
+              "name": "Test language persistence",
+              "steps": ["Set to French", "Refresh page"],
+              "expected": "Page loads in French after refresh"
+            }
+          ]
+        },
+        {
+          "id": "task-16.2",
+          "name": "City Toggle Tests",
+          "microtasks": [
+            {
+              "id": "e2e-16.2.1",
+              "name": "Verify city toggle is visible",
+              "steps": ["Navigate to site", "Look for Montreal/Quebec City toggle"],
+              "expected": "City toggle with Montreal and Quebec City icons visible"
+            },
+            {
+              "id": "e2e-16.2.2",
+              "name": "Test Montreal is default",
+              "steps": ["Check default city selection"],
+              "expected": "Montreal is selected by default, blue theme active"
+            },
+            {
+              "id": "e2e-16.2.3",
+              "name": "Test switching to Quebec City",
+              "steps": ["Click Quebec City icon or toggle"],
+              "expected": "Theme changes to purple, placeholder shows G postal code format"
+            },
+            {
+              "id": "e2e-16.2.4",
+              "name": "Test switching back to Montreal",
+              "steps": ["Click Montreal icon or toggle"],
+              "expected": "Theme changes to blue, placeholder shows H postal code format"
+            },
+            {
+              "id": "e2e-16.2.5",
+              "name": "Test city persistence",
+              "steps": ["Set to Quebec City", "Refresh page"],
+              "expected": "Page loads with Quebec City selected after refresh"
+            }
+          ]
+        },
+        {
+          "id": "task-16.3",
+          "name": "Quick Check Tests - Montreal",
+          "microtasks": [
+            {
+              "id": "e2e-16.3.1",
+              "name": "Test valid Montreal postal code H2V1V5",
+              "steps": ["Select Montreal", "Enter H2V1V5 in postal code field", "Click Check Status"],
+              "expected": "Results show snow removal status and waste collection schedule"
+            },
+            {
+              "id": "e2e-16.3.2",
+              "name": "Test valid Montreal postal code H2J1A1",
+              "steps": ["Enter H2J1A1", "Click Check Status"],
+              "expected": "Results display with different schedule than H2V"
+            },
+            {
+              "id": "e2e-16.3.3",
+              "name": "Test invalid postal code format",
+              "steps": ["Enter 12345", "Click Check Status"],
+              "expected": "Error message about invalid postal code format"
+            },
+            {
+              "id": "e2e-16.3.4",
+              "name": "Test empty postal code",
+              "steps": ["Clear postal code field", "Click Check Status"],
+              "expected": "Validation error asking for postal code"
+            }
+          ]
+        },
+        {
+          "id": "task-16.4",
+          "name": "Quick Check Tests - Quebec City",
+          "microtasks": [
+            {
+              "id": "e2e-16.4.1",
+              "name": "Test valid Quebec postal code G1R4A5",
+              "steps": ["Select Quebec City", "Enter G1R4A5 in postal code field", "Click Check Status"],
+              "expected": "Results show snow removal status and waste collection schedule"
+            },
+            {
+              "id": "e2e-16.4.2",
+              "name": "Test valid Quebec postal code G1V1J8",
+              "steps": ["Enter G1V1J8", "Click Check Status"],
+              "expected": "Results display with waste collection schedule"
+            },
+            {
+              "id": "e2e-16.4.3",
+              "name": "Test Quebec postal code auto-detects city",
+              "steps": ["With Montreal selected, enter G1R4A5", "Click Check Status"],
+              "expected": "City auto-switches to Quebec City, shows Quebec results"
+            }
+          ]
+        },
+        {
+          "id": "task-16.5",
+          "name": "Results Display Tests",
+          "microtasks": [
+            {
+              "id": "e2e-16.5.1",
+              "name": "Verify snow removal card displays",
+              "steps": ["Check status for any postal code"],
+              "expected": "Snow removal card shows with status (Clear/Active/Scheduled)"
+            },
+            {
+              "id": "e2e-16.5.2",
+              "name": "Verify waste collection card displays",
+              "steps": ["Check results section"],
+              "expected": "Waste collection card shows next collection date"
+            },
+            {
+              "id": "e2e-16.5.3",
+              "name": "Verify results translate with language",
+              "steps": ["With results showing, switch language to French"],
+              "expected": "Result labels translate to French"
+            }
+          ]
+        },
+        {
+          "id": "task-16.6",
+          "name": "Subscribe Form Tests",
+          "microtasks": [
+            {
+              "id": "e2e-16.6.1",
+              "name": "Verify subscribe form is visible",
+              "steps": ["Scroll to subscribe section"],
+              "expected": "Form with email field, postal code field, and alert checkboxes visible"
+            },
+            {
+              "id": "e2e-16.6.2",
+              "name": "Test form validation - empty email",
+              "steps": ["Enter postal code but leave email empty", "Click Subscribe"],
+              "expected": "Error message about email required"
+            },
+            {
+              "id": "e2e-16.6.3",
+              "name": "Test form validation - invalid email",
+              "steps": ["Enter invalid email format", "Click Subscribe"],
+              "expected": "Error message about invalid email"
+            },
+            {
+              "id": "e2e-16.6.4",
+              "name": "Test alert type selection",
+              "steps": ["Click on Snow Alerts card", "Click on Waste Alerts card"],
+              "expected": "Cards toggle selection state, visual feedback on click"
+            },
+            {
+              "id": "e2e-16.6.5",
+              "name": "Test form labels translate",
+              "steps": ["Switch to French"],
+              "expected": "Email label, postal code label, button text all in French"
+            }
+          ]
+        },
+        {
+          "id": "task-16.7",
+          "name": "Theme and Styling Tests",
+          "microtasks": [
+            {
+              "id": "e2e-16.7.1",
+              "name": "Verify Montreal blue theme",
+              "steps": ["Select Montreal", "Check button and accent colors"],
+              "expected": "Primary color is blue (#0071e3 or similar)"
+            },
+            {
+              "id": "e2e-16.7.2",
+              "name": "Verify Quebec purple theme",
+              "steps": ["Select Quebec City", "Check button and accent colors"],
+              "expected": "Primary color is purple (#5856d6 or similar)"
+            },
+            {
+              "id": "e2e-16.7.3",
+              "name": "Verify responsive design",
+              "steps": ["Resize browser to mobile width (~375px)"],
+              "expected": "Layout adapts, no horizontal scroll, elements stack properly"
+            }
+          ]
+        },
+        {
+          "id": "task-16.8",
+          "name": "i18n Combined Tests",
+          "microtasks": [
+            {
+              "id": "e2e-16.8.1",
+              "name": "Test French + Montreal combination",
+              "steps": ["Set language to French", "Set city to Montreal", "Check H2V1V5"],
+              "expected": "All text in French, blue theme, Montreal results"
+            },
+            {
+              "id": "e2e-16.8.2",
+              "name": "Test French + Quebec combination",
+              "steps": ["Set language to French", "Set city to Quebec City", "Check G1R4A5"],
+              "expected": "All text in French, purple theme, Quebec results"
+            },
+            {
+              "id": "e2e-16.8.3",
+              "name": "Test English + Quebec combination",
+              "steps": ["Set language to English", "Set city to Quebec City", "Check G1R4A5"],
+              "expected": "All text in English, purple theme, Quebec results"
+            }
+          ]
+        }
+      ]
     }
   ],
   "additional_suggestions": [

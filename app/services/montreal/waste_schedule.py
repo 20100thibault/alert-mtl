@@ -160,7 +160,7 @@ def _calculate_next_collection(day_num: int, from_date: datetime = None) -> date
 
 
 def _format_display(collection_date: datetime, day_name: str) -> str:
-    """Format the next collection date for display."""
+    """Format the next collection date for display (English)."""
     today = datetime.now().date()
     target = collection_date.date()
 
@@ -174,6 +174,23 @@ def _format_display(collection_date: datetime, day_name: str) -> str:
         return f"This {day_name}"
     else:
         return f"Next {day_name}"
+
+
+def _format_display_fr(collection_date: datetime, day_name_fr: str) -> str:
+    """Format the next collection date for display (French)."""
+    today = datetime.now().date()
+    target = collection_date.date()
+
+    days_diff = (target - today).days
+
+    if days_diff == 0:
+        return "Aujourd'hui"
+    elif days_diff == 1:
+        return "Demain"
+    elif days_diff <= 7:
+        return f"Ce {day_name_fr}"
+    else:
+        return f"{day_name_fr} prochain"
 
 
 def get_schedule(postal_code: str) -> Dict[str, Any]:
@@ -244,7 +261,8 @@ def get_schedule(postal_code: str) -> Dict[str, Any]:
             "frequency": "weekly",
             "frequency_fr": "hebdomadaire",
             "next_collection": next_garbage.strftime('%Y-%m-%d'),
-            "next_collection_display": _format_display(next_garbage, day_name)
+            "next_collection_display": _format_display(next_garbage, day_name),
+            "next_collection_display_fr": _format_display_fr(next_garbage, day_name_fr)
         },
         "recycling": {
             "type": "recycling",
@@ -255,7 +273,8 @@ def get_schedule(postal_code: str) -> Dict[str, Any]:
             "frequency": "bi-weekly",
             "frequency_fr": "aux deux semaines",
             "next_collection": next_recycling.strftime('%Y-%m-%d'),
-            "next_collection_display": _format_display(next_recycling, day_name)
+            "next_collection_display": _format_display(next_recycling, day_name),
+            "next_collection_display_fr": _format_display_fr(next_recycling, day_name_fr)
         }
     }
 
