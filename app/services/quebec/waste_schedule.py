@@ -125,12 +125,14 @@ def _scrape_schedule(postal_code: str) -> Dict[str, Any]:
         if not select:
             return None  # No addresses found
 
+        select_name = select.get('name')
         first_option = select.find('option')
         if not first_option:
             return None
 
+        option_value = first_option.get('value', '')
         address_text = first_option.text.strip()
-        logger.debug(f"Found address for {postal_code}: {address_text}")
+        logger.debug(f"Found address for {postal_code}: {address_text} (value={option_value})")
 
         # Step 3: Get new hidden fields
         hidden_fields2 = {}
@@ -140,10 +142,10 @@ def _scrape_schedule(postal_code: str) -> Dict[str, Any]:
             if name:
                 hidden_fields2[name] = value
 
-        # Step 4: Search by address to get calendar
+        # Step 4: Select address from dropdown and click Poursuivre
         form_data2 = hidden_fields2.copy()
-        form_data2['ctl00$ctl00$contenu$texte_page$ucInfoCollecteRechercheAdresse$RechercheAdresse$txtNomRue'] = address_text
-        form_data2['ctl00$ctl00$contenu$texte_page$ucInfoCollecteRechercheAdresse$RechercheAdresse$BtnRue'] = 'Rechercher'
+        form_data2[select_name] = option_value
+        form_data2['ctl00$ctl00$contenu$texte_page$ucInfoCollecteRechercheAdresse$RechercheAdresse$btnChoix'] = 'Poursuivre'
 
         response3 = session.post(INFO_COLLECTE_URL, data=form_data2, timeout=30)
         response3.raise_for_status()
