@@ -1,121 +1,78 @@
 """
 Quebec City Waste Collection Schedule Service
 
-FSA-based (Forward Sortation Area) waste collection schedule lookup.
-Uses the first 3 characters of the postal code to determine collection day.
+Real-time scraping from Quebec City's Info-Collecte website.
+Fetches actual collection schedules based on postal code.
 
-Schedule data is approximate and may vary by street.
-For exact schedules, users should check: https://www.ville.quebec.qc.ca/services/info-collecte/
+Data source: https://www.ville.quebec.qc.ca/services/info-collecte/
 """
 
+import logging
+import requests
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
+from functools import lru_cache
+import time
 
-# City website URL (same for EN/FR)
+logger = logging.getLogger(__name__)
+
+# City website URL
 CITY_WEBSITE = "https://www.ville.quebec.qc.ca/services/info-collecte/"
+INFO_COLLECTE_URL = "https://www.ville.quebec.qc.ca/services/info-collecte/index.aspx"
 
-# Day name translations
-DAY_NAMES_FR = {
-    'Monday': 'Lundi',
-    'Tuesday': 'Mardi',
-    'Wednesday': 'Mercredi',
-    'Thursday': 'Jeudi',
-    'Friday': 'Vendredi',
+# Day name mappings
+DAY_NAMES_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+DAY_NAMES_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+
+# French month names
+MONTH_MAP = {
+    'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+    'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+    'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
 }
 
-# Quebec City FSA to collection day mapping
-# Based on arrondissement typical collection patterns
-# Format: FSA -> (day_name, weekday_number) where Monday=0
-QUEBEC_FSA_DAYS = {
-    # La Cité-Limoilou (dense areas) - Monday
-    'G1K': ('Monday', 0),
-    'G1L': ('Monday', 0),
-    'G1R': ('Monday', 0),
+# Simple in-memory cache with TTL
+_cache: Dict[str, tuple] = {}  # postal_code -> (result, timestamp)
+CACHE_TTL_SECONDS = 86400  # 24 hours
 
-    # La Cité-Limoilou (semi-dense) - Tuesday
-    'G1M': ('Tuesday', 1),
-    'G1N': ('Tuesday', 1),
 
-    # Sainte-Foy-Sillery-Cap-Rouge - Thursday
-    'G1V': ('Thursday', 3),
-    'G1W': ('Thursday', 3),
-    'G1X': ('Thursday', 3),
-    'G1Y': ('Thursday', 3),
+def _get_cached(postal_code: str) -> Optional[Dict[str, Any]]:
+    """Get cached result if still valid."""
+    normalized = postal_code.upper().replace(' ', '').replace('-', '')
+    if normalized in _cache:
+        result, timestamp = _cache[normalized]
+        if time.time() - timestamp < CACHE_TTL_SECONDS:
+            logger.debug(f"Cache hit for {normalized}")
+            return result
+        else:
+            del _cache[normalized]
+    return None
 
-    # Les Rivières - Wednesday
-    'G1E': ('Wednesday', 2),
-    'G2B': ('Wednesday', 2),
-    'G2E': ('Wednesday', 2),
 
-    # Charlesbourg - Friday
-    'G1G': ('Friday', 4),
-    'G1H': ('Friday', 4),
-    'G2N': ('Friday', 4),
-
-    # Beauport - Wednesday
-    'G1B': ('Wednesday', 2),
-    'G1C': ('Wednesday', 2),
-
-    # La Haute-Saint-Charles - Thursday
-    'G2A': ('Thursday', 3),
-    'G2C': ('Thursday', 3),
-    'G3A': ('Thursday', 3),
-    'G3B': ('Thursday', 3),
-    'G3E': ('Thursday', 3),
-    'G3G': ('Thursday', 3),
-    'G3J': ('Thursday', 3),
-    'G3K': ('Thursday', 3),
-
-    # Additional areas
-    'G1J': ('Tuesday', 1),
-    'G1P': ('Wednesday', 2),
-    'G1S': ('Thursday', 3),
-    'G1T': ('Thursday', 3),
-    'G2G': ('Friday', 4),
-    'G2J': ('Wednesday', 2),
-    'G2K': ('Wednesday', 2),
-    'G2L': ('Thursday', 3),
-    'G2M': ('Thursday', 3),
-}
+def _set_cached(postal_code: str, result: Dict[str, Any]):
+    """Cache a result."""
+    normalized = postal_code.upper().replace(' ', '').replace('-', '')
+    _cache[normalized] = (result, time.time())
 
 
 def _extract_fsa(postal_code: str) -> Optional[str]:
     """Extract FSA (first 3 characters) from postal code."""
     if not postal_code:
         return None
-
-    # Clean and normalize
     clean = postal_code.upper().replace(' ', '').replace('-', '')
-
     if len(clean) < 3:
         return None
-
     fsa = clean[:3]
-
-    # Validate format (letter-digit-letter for Canadian FSA)
     if not (fsa[0].isalpha() and fsa[1].isdigit() and fsa[2].isalpha()):
         return None
-
     return fsa
-
-
-def _calculate_next_collection(day_num: int, from_date: datetime = None) -> datetime:
-    """Calculate the next occurrence of a collection day."""
-    if from_date is None:
-        from_date = datetime.now()
-
-    days_until = (day_num - from_date.weekday()) % 7
-    if days_until == 0:
-        days_until = 7  # If today is collection day, show next week
-
-    return from_date + timedelta(days=days_until)
 
 
 def _format_display(collection_date: datetime, day_name: str) -> str:
     """Format the next collection date for display."""
     today = datetime.now().date()
     target = collection_date.date()
-
     days_diff = (target - today).days
 
     if days_diff == 0:
@@ -128,19 +85,146 @@ def _format_display(collection_date: datetime, day_name: str) -> str:
         return f"Next {day_name}"
 
 
+def _scrape_schedule(postal_code: str) -> Dict[str, Any]:
+    """
+    Scrape the actual schedule from Quebec City's Info-Collecte website.
+
+    Returns dict with collection days or error.
+    """
+    try:
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'fr-CA,fr;q=0.9,en;q=0.8',
+        })
+
+        # Step 1: GET initial page to get ASP.NET tokens
+        response = session.get(INFO_COLLECTE_URL, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        hidden_fields = {}
+        for inp in soup.find_all('input', {'type': 'hidden'}):
+            name = inp.get('name')
+            value = inp.get('value', '')
+            if name:
+                hidden_fields[name] = value
+
+        # Step 2: Search by postal code to get address
+        form_data = hidden_fields.copy()
+        form_data['ctl00$ctl00$contenu$texte_page$ucInfoCollecteRechercheAdresse$RechercheAdresse$txtCodePostal'] = postal_code
+        form_data['ctl00$ctl00$contenu$texte_page$ucInfoCollecteRechercheAdresse$RechercheAdresse$BtnCodePostal'] = 'Rechercher'
+
+        response2 = session.post(INFO_COLLECTE_URL, data=form_data, timeout=30)
+        response2.raise_for_status()
+        soup2 = BeautifulSoup(response2.text, 'html.parser')
+
+        # Get address from dropdown
+        select = soup2.find('select', {'id': lambda x: x and 'ddChoix' in str(x)})
+        if not select:
+            return None  # No addresses found
+
+        first_option = select.find('option')
+        if not first_option:
+            return None
+
+        address_text = first_option.text.strip()
+        logger.debug(f"Found address for {postal_code}: {address_text}")
+
+        # Step 3: Get new hidden fields
+        hidden_fields2 = {}
+        for inp in soup2.find_all('input', {'type': 'hidden'}):
+            name = inp.get('name')
+            value = inp.get('value', '')
+            if name:
+                hidden_fields2[name] = value
+
+        # Step 4: Search by address to get calendar
+        form_data2 = hidden_fields2.copy()
+        form_data2['ctl00$ctl00$contenu$texte_page$ucInfoCollecteRechercheAdresse$RechercheAdresse$txtNomRue'] = address_text
+        form_data2['ctl00$ctl00$contenu$texte_page$ucInfoCollecteRechercheAdresse$RechercheAdresse$BtnRue'] = 'Rechercher'
+
+        response3 = session.post(INFO_COLLECTE_URL, data=form_data2, timeout=30)
+        response3.raise_for_status()
+        soup3 = BeautifulSoup(response3.text, 'html.parser')
+
+        # Parse calendars
+        calendars = soup3.find_all('table', class_='calendrier')
+        if not calendars:
+            return None
+
+        # Extract collection dates
+        garbage_dates = []
+        recycling_dates = []
+
+        for cal in calendars:
+            caption = cal.find('caption')
+            if not caption:
+                continue
+
+            # Parse month/year from caption (e.g., "Janvier 2026")
+            caption_text = caption.text.strip().lower()
+            parts = caption_text.split()
+            month_num = MONTH_MAP.get(parts[0], 1)
+            year = int(parts[1]) if len(parts) > 1 else datetime.now().year
+
+            # Find collection days
+            for cell in cal.find_all('td'):
+                date_elem = cell.find(class_='date')
+                img_elem = cell.find('img')
+                if date_elem and img_elem:
+                    try:
+                        day = int(date_elem.text.strip())
+                        collection_type = img_elem.get('alt', img_elem.get('title', '')).lower()
+
+                        date_obj = datetime(year, month_num, day)
+                        weekday = date_obj.weekday()  # 0=Monday
+
+                        if 'ordures' in collection_type:
+                            garbage_dates.append((date_obj, weekday))
+                        elif 'recyclage' in collection_type:
+                            recycling_dates.append((date_obj, weekday))
+                    except (ValueError, TypeError):
+                        continue
+
+        if not garbage_dates and not recycling_dates:
+            return None
+
+        # Determine collection day (should be consistent)
+        garbage_weekday = garbage_dates[0][1] if garbage_dates else None
+        recycling_weekday = recycling_dates[0][1] if recycling_dates else None
+
+        return {
+            'address': address_text,
+            'garbage_weekday': garbage_weekday,
+            'recycling_weekday': recycling_weekday,
+            'garbage_dates': [d[0] for d in garbage_dates],
+            'recycling_dates': [d[0] for d in recycling_dates],
+        }
+
+    except requests.RequestException as e:
+        logger.error(f"Request error scraping Quebec schedule: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error scraping Quebec schedule: {e}")
+        return None
+
+
 def get_schedule(postal_code: str) -> Dict[str, Any]:
     """
     Get waste collection schedule for a Quebec City postal code.
 
+    Uses real-time scraping from Info-Collecte with caching.
+
     Args:
-        postal_code: Canadian postal code (e.g., "G1V 1J8")
+        postal_code: Canadian postal code (e.g., "G1T 1M9")
 
     Returns:
         Dict with schedule info or error response
     """
-    # Extract FSA
+    # Validate postal code
     fsa = _extract_fsa(postal_code)
-
     if not fsa:
         return _error_response(
             "invalid_postal_code",
@@ -148,7 +232,6 @@ def get_schedule(postal_code: str) -> Dict[str, Any]:
             "Veuillez entrer un code postal de la ville de Québec valide."
         )
 
-    # Check if it's a Quebec City FSA (starts with G)
     if not fsa.startswith('G'):
         return _error_response(
             "not_quebec_city",
@@ -156,60 +239,85 @@ def get_schedule(postal_code: str) -> Dict[str, Any]:
             "Ce code postal n'est pas dans la ville de Québec."
         )
 
-    # Look up collection day
-    if fsa not in QUEBEC_FSA_DAYS:
+    # Check cache first
+    cached = _get_cached(postal_code)
+    if cached:
+        return cached
+
+    # Scrape the actual schedule
+    scraped = _scrape_schedule(postal_code)
+
+    if not scraped:
         return _error_response(
-            "unknown_area",
-            "We couldn't determine the collection schedule for this area.",
-            "Nous n'avons pas pu déterminer l'horaire de collecte pour ce secteur."
+            "scrape_failed",
+            "Could not retrieve schedule. Please check the city website.",
+            "Impossible de récupérer l'horaire. Veuillez consulter le site de la ville."
         )
 
-    day_name, day_num = QUEBEC_FSA_DAYS[fsa]
-    day_name_fr = DAY_NAMES_FR[day_name]
-
-    # Calculate next collection dates
+    # Build response
     now = datetime.now()
-    next_garbage = _calculate_next_collection(day_num, now)
 
-    # Recycling is bi-weekly - determine based on week number
-    week_num = next_garbage.isocalendar()[1]
-    if week_num % 2 == 0:
-        next_recycling = next_garbage
-    else:
-        next_recycling = next_garbage + timedelta(days=7)
+    # Garbage info
+    garbage_weekday = scraped['garbage_weekday']
+    garbage_day_en = DAY_NAMES_EN[garbage_weekday] if garbage_weekday is not None else 'Unknown'
+    garbage_day_fr = DAY_NAMES_FR[garbage_weekday] if garbage_weekday is not None else 'Inconnu'
 
-    return {
+    # Find next garbage collection
+    next_garbage = None
+    for d in scraped.get('garbage_dates', []):
+        if d.date() >= now.date():
+            next_garbage = d
+            break
+
+    # Recycling info
+    recycling_weekday = scraped['recycling_weekday']
+    recycling_day_en = DAY_NAMES_EN[recycling_weekday] if recycling_weekday is not None else 'Unknown'
+    recycling_day_fr = DAY_NAMES_FR[recycling_weekday] if recycling_weekday is not None else 'Inconnu'
+
+    # Find next recycling collection
+    next_recycling = None
+    for d in scraped.get('recycling_dates', []):
+        if d.date() >= now.date():
+            next_recycling = d
+            break
+
+    result = {
         "success": True,
         "city": "quebec",
         "zone_code": fsa,
-        "zone_description": f"Quebec City ({fsa})",
-        "disclaimer": "Schedule may vary by street. Check Info-Collecte for exact schedule.",
-        "disclaimer_fr": "L'horaire peut varier selon la rue. Consultez Info-Collecte pour l'horaire exact.",
+        "zone_description": f"Quebec City - {scraped.get('address', fsa)}",
+        "disclaimer": "Schedule from Info-Collecte. May vary for holidays.",
+        "disclaimer_fr": "Horaire provenant d'Info-Collecte. Peut varier lors des jours fériés.",
         "city_website": CITY_WEBSITE,
         "city_website_fr": CITY_WEBSITE,
         "garbage": {
             "type": "garbage",
             "name": "Garbage",
             "name_fr": "Ordures ménagères",
-            "day_of_week": day_name,
-            "day_of_week_fr": day_name_fr,
-            "frequency": "weekly",
-            "frequency_fr": "hebdomadaire",
-            "next_collection": next_garbage.strftime('%Y-%m-%d'),
-            "next_collection_display": _format_display(next_garbage, day_name)
+            "day_of_week": garbage_day_en,
+            "day_of_week_fr": garbage_day_fr,
+            "frequency": "bi-weekly",
+            "frequency_fr": "aux deux semaines",
+            "next_collection": next_garbage.strftime('%Y-%m-%d') if next_garbage else None,
+            "next_collection_display": _format_display(next_garbage, garbage_day_en) if next_garbage else garbage_day_en
         },
         "recycling": {
             "type": "recycling",
             "name": "Recycling",
             "name_fr": "Matières recyclables",
-            "day_of_week": day_name,
-            "day_of_week_fr": day_name_fr,
+            "day_of_week": recycling_day_en,
+            "day_of_week_fr": recycling_day_fr,
             "frequency": "bi-weekly",
             "frequency_fr": "aux deux semaines",
-            "next_collection": next_recycling.strftime('%Y-%m-%d'),
-            "next_collection_display": _format_display(next_recycling, day_name)
+            "next_collection": next_recycling.strftime('%Y-%m-%d') if next_recycling else None,
+            "next_collection_display": _format_display(next_recycling, recycling_day_en) if next_recycling else recycling_day_en
         }
     }
+
+    # Cache the result
+    _set_cached(postal_code, result)
+
+    return result
 
 
 def _error_response(error_code: str, message: str, message_fr: str) -> Dict[str, Any]:
