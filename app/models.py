@@ -8,6 +8,30 @@ def generate_token():
     return str(uuid.uuid4())
 
 
+def detect_city_from_postal(postal_code: str) -> str:
+    """Detect city from postal code prefix.
+
+    Args:
+        postal_code: Canadian postal code (e.g., 'H2V 1V5' or 'G1R 4P5')
+
+    Returns:
+        'montreal' for H prefix, 'quebec' for G prefix
+
+    Raises:
+        ValueError: If postal code prefix is not supported
+    """
+    if not postal_code:
+        raise ValueError("Postal code is required")
+
+    prefix = postal_code.strip().upper()[0]
+    if prefix == 'H':
+        return 'montreal'
+    elif prefix == 'G':
+        return 'quebec'
+    else:
+        raise ValueError(f"Unsupported postal code prefix: {prefix}. Only H (Montreal) and G (Quebec City) are supported.")
+
+
 class Subscriber(db.Model):
     """Subscriber model for email alert recipients."""
     __tablename__ = 'subscribers'
@@ -42,18 +66,24 @@ class Address(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subscriber_id = db.Column(db.Integer, db.ForeignKey('subscribers.id'), nullable=False)
 
-    # Postal code (primary identifier now)
+    # City identifier (montreal or quebec)
+    city = db.Column(db.String(20), nullable=False, default='montreal', index=True)
+
+    # Postal code (primary identifier)
     postal_code = db.Column(db.String(10), index=True)
 
-    # Address components (optional now)
+    # Address components (optional)
     street_name = db.Column(db.String(255))
     street_type = db.Column(db.String(50))  # Rue, Avenue, Boulevard, etc.
     civic_number = db.Column(db.Integer)
     borough = db.Column(db.String(100))
 
-    # Montreal-specific identifiers (optional now)
+    # Montreal-specific identifiers
     cote_rue_id = db.Column(db.Integer, index=True)
     cote = db.Column(db.String(10))  # "Droit" or "Gauche"
+
+    # Quebec City-specific identifiers
+    waste_zone_id = db.Column(db.Integer, db.ForeignKey('waste_zones.id'), nullable=True)
 
     # Coordinates for waste collection lookup
     latitude = db.Column(db.Float)
@@ -63,6 +93,10 @@ class Address(db.Model):
     last_snow_status = db.Column(db.String(50))
     last_snow_check = db.Column(db.DateTime)
 
+    # Alert preferences (per address)
+    snow_alerts = db.Column(db.Boolean, default=True)
+    waste_alerts = db.Column(db.Boolean, default=False)
+
     # Metadata
     label = db.Column(db.String(50))  # "Home", "Work", etc.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -70,11 +104,13 @@ class Address(db.Model):
     # Relationships
     alert_history = db.relationship('AlertHistory', backref='address', lazy='dynamic',
                                     cascade='all, delete-orphan')
+    waste_zone = db.relationship('WasteZone', backref='addresses')
 
     def __repr__(self):
+        city_label = f"[{self.city}]" if self.city else ""
         if self.postal_code:
-            return f'<Address {self.postal_code}>'
-        return f'<Address {self.civic_number} {self.street_name}>'
+            return f'<Address {city_label} {self.postal_code}>'
+        return f'<Address {city_label} {self.civic_number} {self.street_name}>'
 
     def full_address(self):
         """Return formatted full address."""
@@ -91,9 +127,15 @@ class Address(db.Model):
             parts.append(f", {self.borough}")
         return ' '.join(parts) if parts else self.postal_code or 'Unknown'
 
+    def city_display_name(self):
+        """Return human-readable city name."""
+        return 'Montreal' if self.city == 'montreal' else 'Quebec City'
+
     def to_dict(self):
         return {
             'id': self.id,
+            'city': self.city,
+            'city_display': self.city_display_name(),
             'full_address': self.full_address(),
             'postal_code': self.postal_code,
             'street_name': self.street_name,
@@ -102,9 +144,39 @@ class Address(db.Model):
             'borough': self.borough,
             'cote_rue_id': self.cote_rue_id,
             'cote': self.cote,
+            'waste_zone_id': self.waste_zone_id,
+            'snow_alerts': self.snow_alerts,
+            'waste_alerts': self.waste_alerts,
             'label': self.label,
             'last_snow_status': self.last_snow_status,
             'last_snow_check': self.last_snow_check.isoformat() if self.last_snow_check else None
+        }
+
+
+class WasteZone(db.Model):
+    """Quebec City waste collection zones."""
+    __tablename__ = 'waste_zones'
+
+    id = db.Column(db.Integer, primary_key=True)
+    zone_code = db.Column(db.String(20), unique=True, nullable=False, index=True)
+
+    # Schedule information
+    garbage_day = db.Column(db.String(20))  # 'monday', 'tuesday', etc.
+    recycling_week = db.Column(db.String(10))  # 'odd' or 'even'
+
+    # Zone boundaries (optional, for lookup)
+    description = db.Column(db.String(255))
+
+    def __repr__(self):
+        return f'<WasteZone {self.zone_code}: {self.garbage_day}, recycling {self.recycling_week}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'zone_code': self.zone_code,
+            'garbage_day': self.garbage_day,
+            'recycling_week': self.recycling_week,
+            'description': self.description
         }
 
 
@@ -115,15 +187,26 @@ class AlertHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     address_id = db.Column(db.Integer, db.ForeignKey('addresses.id'), nullable=False)
 
+    # City for easier querying
+    city = db.Column(db.String(20), index=True)
+
     # Alert details
     alert_type = db.Column(db.String(50), nullable=False)  # 'snow_scheduled', 'snow_urgent', 'snow_cleared', 'waste_reminder'
     status = db.Column(db.String(50))  # The status that triggered the alert
     message = db.Column(db.Text)
 
+    # Reference date for deduplication (e.g., waste collection date)
+    reference_date = db.Column(db.Date)
+
     # Delivery tracking
     sent_at = db.Column(db.DateTime, default=datetime.utcnow)
     delivered = db.Column(db.Boolean, default=True)
     error_message = db.Column(db.Text)
+
+    # Composite index for deduplication
+    __table_args__ = (
+        db.Index('idx_alert_dedup', 'address_id', 'city', 'alert_type', 'reference_date'),
+    )
 
     def __repr__(self):
         return f'<AlertHistory {self.alert_type} for address {self.address_id}>'
@@ -132,8 +215,10 @@ class AlertHistory(db.Model):
         return {
             'id': self.id,
             'address_id': self.address_id,
+            'city': self.city,
             'alert_type': self.alert_type,
             'status': self.status,
+            'reference_date': self.reference_date.isoformat() if self.reference_date else None,
             'sent_at': self.sent_at.isoformat(),
             'delivered': self.delivered
         }

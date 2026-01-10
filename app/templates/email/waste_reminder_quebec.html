@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: #5856d6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">{{ collection_display }} Tomorrow</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Alert Quebec - Quebec City</p>
+    </div>
+
+    <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="background: #F3F4F6; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+            <strong style="font-size: 18px;">{{ postal_code }}</strong>
+        </div>
+
+        <p style="font-size: 18px;">
+            Don't forget to put out your bins tonight!
+        </p>
+
+        <div style="margin: 20px 0;">
+            {% if 'garbage' in collection_types %}
+            <div style="background: #F0FDF4; border: 1px solid #22C55E; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center;">
+                <span style="font-size: 24px; margin-right: 15px;">🗑️</span>
+                <div>
+                    <strong style="color: #166534;">Garbage Collection</strong>
+                    <p style="margin: 5px 0 0 0; color: #6B7280; font-size: 14px;">Put out before 7:00 AM</p>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if 'recycling' in collection_types %}
+            <div style="background: #EFF6FF; border: 1px solid #3B82F6; padding: 15px; border-radius: 8px; display: flex; align-items: center;">
+                <span style="font-size: 24px; margin-right: 15px;">♻️</span>
+                <div>
+                    <strong style="color: #1E40AF;">Recycling Collection</strong>
+                    <p style="margin: 5px 0 0 0; color: #6B7280; font-size: 14px;">Put out before 7:00 AM</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if schedule %}
+        <div style="background: #F9FAFB; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #6B7280;">
+                <strong>Your Schedule:</strong><br>
+                {% if schedule.garbage %}
+                Garbage: {{ schedule.garbage.day_of_week }}s<br>
+                {% endif %}
+                {% if schedule.recycling %}
+                Recycling: {{ schedule.recycling.day_of_week }}s ({{ schedule.recycling.week_type }} weeks)
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+        <p style="font-size: 12px; color: #6B7280;">
+            <a href="{{ unsubscribe_url }}" style="color: #5856d6;">Unsubscribe</a> from Alert Quebec
+        </p>
+    </div>
+</body>
+</html>

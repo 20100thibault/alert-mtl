@@ -4,7 +4,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
 
 from app import db, limiter, logger
-from app.models import Subscriber, Address, AlertHistory, GeobaseCache
+from app.models import Subscriber, Address, AlertHistory, GeobaseCache, detect_city_from_postal
 
 # Create blueprints
 main_bp = Blueprint('main', __name__)
@@ -67,7 +67,7 @@ def health_check():
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.utcnow().isoformat(),
-            'service': 'alert-mtl'
+            'service': 'alert-quebec'
         }), 200
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -84,42 +84,33 @@ def health_check():
 @api_bp.route('/snow-status')
 @limiter.limit("30 per minute")
 def get_snow_status():
-    """Get snow removal status for an address or coordinates."""
-    # Get parameters
-    cote_rue_id = request.args.get('cote_rue_id', type=int)
+    """Get snow removal status for coordinates."""
     lat = request.args.get('lat', type=float)
     lon = request.args.get('lon', type=float)
-    address = request.args.get('address')
+    city = request.args.get('city')
 
-    if not cote_rue_id and not (lat and lon) and not address:
+    if not (lat and lon):
         return jsonify({
-            'error': 'Please provide cote_rue_id, coordinates (lat/lon), or address'
+            'error': 'Please provide coordinates (lat/lon)'
         }), 400
 
     try:
-        from app.services.planif_neige import get_status_for_street
+        from app.services import get_snow_status as service_get_snow_status
 
-        # If we have an address, look up the COTE_RUE_ID
-        if address and not cote_rue_id:
-            from app.services.geobase import lookup_address
-            result = lookup_address(address)
-            if not result:
-                return jsonify({'error': 'Address not found in Montreal'}), 404
-            cote_rue_id = result['cote_rue_id']
+        # Auto-detect city from coordinates if not provided
+        if not city:
+            # Rough bounds: Montreal ~45.4-45.7, Quebec City ~46.7-47.0
+            if 46.5 <= lat <= 47.5:
+                city = 'quebec'
+            else:
+                city = 'montreal'
 
-        # If we have coordinates, find nearest street
-        elif lat and lon and not cote_rue_id:
-            from app.services.geobase import lookup_by_coordinates
-            result = lookup_by_coordinates(lat, lon)
-            if not result:
-                return jsonify({'error': 'No street found near these coordinates'}), 404
-            cote_rue_id = result['cote_rue_id']
-
-        # Get the snow status
-        status = get_status_for_street(cote_rue_id)
+        status = service_get_snow_status(city=city, lat=lat, lon=lon)
 
         return jsonify({
-            'cote_rue_id': cote_rue_id,
+            'city': city,
+            'latitude': lat,
+            'longitude': lon,
             'status': status
         })
 
@@ -134,13 +125,21 @@ def get_waste_schedule():
     """Get waste collection schedule for coordinates."""
     lat = request.args.get('lat', type=float)
     lon = request.args.get('lon', type=float)
+    city = request.args.get('city')
+    waste_zone_id = request.args.get('waste_zone_id', type=int)
 
-    if not lat or not lon:
-        return jsonify({'error': 'Please provide lat and lon coordinates'}), 400
+    if not (lat and lon) and not waste_zone_id:
+        return jsonify({'error': 'Please provide lat/lon coordinates or waste_zone_id'}), 400
 
     try:
-        from app.services.waste import get_schedule_for_location
-        schedule = get_schedule_for_location(lat, lon)
+        from app.services import get_waste_schedule as service_get_waste_schedule
+
+        schedule = service_get_waste_schedule(
+            city=city,
+            lat=lat,
+            lon=lon,
+            waste_zone_id=waste_zone_id
+        )
 
         if not schedule:
             return jsonify({'error': 'No waste schedule found for this location'}), 404
@@ -153,65 +152,57 @@ def get_waste_schedule():
 
 
 # ============================================================================
-# API Routes - Address Lookup
+# API Routes - Geocoding
 # ============================================================================
 
-@api_bp.route('/address/search')
-@limiter.limit("60 per minute")
-def search_address():
-    """Search for addresses matching a query (autocomplete)."""
-    query = request.args.get('q', '').strip()
-
-    if len(query) < 3:
-        return jsonify({'results': []})
-
-    try:
-        from app.services.geobase import search_addresses
-        results = search_addresses(query, limit=10)
-        return jsonify({'results': results})
-
-    except Exception as e:
-        logger.error(f"Error searching addresses: {e}")
-        return jsonify({'error': 'Search failed'}), 500
-
-
-@api_bp.route('/address/validate', methods=['POST'])
+@api_bp.route('/geocode/postal-code')
 @limiter.limit("30 per minute")
-def validate_address():
-    """Validate an address and return COTE_RUE_ID."""
-    data = request.get_json()
+def geocode_postal_code_endpoint():
+    """Convert postal code to coordinates. Supports both Montreal (H) and Quebec City (G)."""
+    postal_code = request.args.get('postal_code', '').strip().upper()
 
-    if not data or 'address' not in data:
-        return jsonify({'error': 'Address is required'}), 400
+    if not postal_code:
+        return jsonify({'error': 'Postal code is required'}), 400
+
+    # Validate Canadian postal code format
+    postal_code = postal_code.replace(' ', '')
+    if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code):
+        return jsonify({'error': 'Invalid postal code format'}), 400
+
+    formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
+
+    # Detect city from postal code prefix
+    try:
+        city = detect_city_from_postal(postal_code)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
     try:
-        from app.services.geobase import lookup_address
-        result = lookup_address(data['address'])
+        from app.services import geocode_postal_code as service_geocode
+
+        result = service_geocode(postal_code)
 
         if not result:
-            return jsonify({
-                'valid': False,
-                'error': 'Address not found in Montreal'
-            }), 404
+            return jsonify({'error': 'Could not locate this postal code'}), 404
 
         return jsonify({
-            'valid': True,
-            'cote_rue_id': result['cote_rue_id'],
-            'street_name': result['street_name'],
-            'civic_number': result['civic_number'],
-            'cote': result['cote'],
-            'borough': result.get('borough')
+            'postal_code': formatted_postal,
+            'city': city,
+            'latitude': result['lat'],
+            'longitude': result['lon'],
+            'display_name': formatted_postal,
+            'source': result.get('source', 'unknown')
         })
 
     except Exception as e:
-        logger.error(f"Error validating address: {e}")
-        return jsonify({'error': 'Validation failed'}), 500
+        logger.error(f"Error geocoding postal code: {e}")
+        return jsonify({'error': 'Failed to geocode postal code'}), 500
 
 
 @api_bp.route('/geocode/reverse')
 @limiter.limit("30 per minute")
 def reverse_geocode():
-    """Convert coordinates to nearest Montreal address."""
+    """Convert coordinates to nearest address."""
     lat = request.args.get('lat', type=float)
     lon = request.args.get('lon', type=float)
 
@@ -219,7 +210,7 @@ def reverse_geocode():
         return jsonify({'error': 'Please provide lat and lon coordinates'}), 400
 
     try:
-        from app.services.geobase import lookup_by_coordinates
+        from app.services.montreal.geobase import lookup_by_coordinates
         result = lookup_by_coordinates(lat, lon)
 
         if not result:
@@ -232,228 +223,123 @@ def reverse_geocode():
         return jsonify({'error': 'Geocoding failed'}), 500
 
 
-@api_bp.route('/geocode/postal-code')
-@limiter.limit("30 per minute")
-def geocode_postal_code_endpoint():
-    """Convert postal code to coordinates."""
-    postal_code = request.args.get('postal_code', '').strip().upper()
-
-    if not postal_code:
-        return jsonify({'error': 'Postal code is required'}), 400
-
-    # Validate Canadian postal code format
-    postal_code = postal_code.replace(' ', '')
-    if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code):
-        return jsonify({'error': 'Invalid postal code format'}), 400
-
-    # Check if it's a Montreal postal code
-    if not postal_code.startswith('H'):
-        return jsonify({'error': 'This postal code is not in Montreal (must start with H)'}), 400
-
-    formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
-    fsa = postal_code[:3]
-
-    try:
-        lat, lon, location_name = None, None, None
-
-        # Try Nominatim first
-        lat, lon, location_name = geocode_postal_code_nominatim(postal_code)
-
-        # Fallback to FSA lookup table
-        if lat is None and fsa in MONTREAL_FSA_COORDS:
-            lat, lon = MONTREAL_FSA_COORDS[fsa]
-            location_name = f"Montreal ({fsa})"
-
-        if lat is None:
-            return jsonify({'error': 'Could not locate this postal code'}), 404
-
-        return jsonify({
-            'postal_code': formatted_postal,
-            'latitude': lat,
-            'longitude': lon,
-            'display_name': location_name or formatted_postal
-        })
-
-    except Exception as e:
-        logger.error(f"Error geocoding postal code: {e}")
-        return jsonify({'error': 'Failed to geocode postal code'}), 500
-
-
-def geocode_postal_code_nominatim(postal_code):
-    """Try to geocode a Canadian postal code using Nominatim."""
-    import requests as req
-
-    formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
-    headers = {'User-Agent': 'AlertMTL/1.0 (Montreal snow/waste alerts)'}
-
-    # Try 1: Full postal code with city context
-    try:
-        response = req.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={
-                'q': f"{formatted_postal}, Montreal, Quebec, Canada",
-                'format': 'json',
-                'limit': 1
-            },
-            headers=headers,
-            timeout=10
-        )
-        results = response.json()
-        if results:
-            return float(results[0]['lat']), float(results[0]['lon']), results[0].get('display_name', formatted_postal)
-    except:
-        pass
-
-    # Try 2: Just postal code with country
-    try:
-        response = req.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={
-                'postalcode': formatted_postal,
-                'country': 'Canada',
-                'format': 'json',
-                'limit': 1
-            },
-            headers=headers,
-            timeout=10
-        )
-        results = response.json()
-        if results:
-            return float(results[0]['lat']), float(results[0]['lon']), results[0].get('display_name', formatted_postal)
-    except:
-        pass
-
-    # Try 3: FSA only (first 3 chars) - broader area
-    fsa = postal_code[:3]
-    try:
-        response = req.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={
-                'q': f"{fsa}, Montreal, Quebec, Canada",
-                'format': 'json',
-                'limit': 1
-            },
-            headers=headers,
-            timeout=10
-        )
-        results = response.json()
-        if results:
-            return float(results[0]['lat']), float(results[0]['lon']), f"Montreal ({fsa})"
-    except:
-        pass
-
-    return None, None, None
-
-
-# Montreal FSA (Forward Sortation Area) approximate coordinates
-# These are the first 3 characters of Montreal postal codes
-MONTREAL_FSA_COORDS = {
-    'H1A': (45.6205, -73.6049), 'H1B': (45.6275, -73.5699), 'H1C': (45.6153, -73.5486),
-    'H1E': (45.6359, -73.5879), 'H1G': (45.5902, -73.6139), 'H1H': (45.5753, -73.6249),
-    'H1J': (45.6051, -73.5651), 'H1K': (45.5909, -73.5761), 'H1L': (45.5826, -73.5498),
-    'H1M': (45.5648, -73.5624), 'H1N': (45.5527, -73.5471), 'H1P': (45.5958, -73.6365),
-    'H1R': (45.5775, -73.6531), 'H1S': (45.5635, -73.6272), 'H1T': (45.5594, -73.6050),
-    'H1V': (45.5524, -73.5682), 'H1W': (45.5413, -73.5482), 'H1X': (45.5524, -73.5941),
-    'H1Y': (45.5405, -73.5772), 'H1Z': (45.5493, -73.6152),
-    'H2A': (45.5361, -73.6049), 'H2B': (45.5362, -73.6329), 'H2C': (45.5367, -73.6531),
-    'H2E': (45.5330, -73.5989), 'H2G': (45.5260, -73.5917), 'H2H': (45.5166, -73.5808),
-    'H2J': (45.5245, -73.5690), 'H2K': (45.5328, -73.5536), 'H2L': (45.5187, -73.5614),
-    'H2M': (45.5369, -73.6501), 'H2N': (45.5325, -73.6696), 'H2P': (45.5306, -73.6213),
-    'H2R': (45.5257, -73.6167), 'H2S': (45.5232, -73.6056), 'H2T': (45.5188, -73.5918),
-    'H2V': (45.5188, -73.6084), 'H2W': (45.5131, -73.5790), 'H2X': (45.5088, -73.5696),
-    'H2Y': (45.5047, -73.5556), 'H2Z': (45.5044, -73.5621),
-    'H3A': (45.5029, -73.5793), 'H3B': (45.4999, -73.5704), 'H3C': (45.4928, -73.5544),
-    'H3E': (45.4666, -73.5312), 'H3G': (45.4970, -73.5806), 'H3H': (45.4854, -73.5896),
-    'H3J': (45.4816, -73.5695), 'H3K': (45.4722, -73.5609), 'H3L': (45.5264, -73.6509),
-    'H3M': (45.5091, -73.6845), 'H3N': (45.5188, -73.6294), 'H3P': (45.5001, -73.6448),
-    'H3R': (45.4902, -73.6344), 'H3S': (45.4987, -73.6193), 'H3T': (45.5000, -73.6049),
-    'H3V': (45.4870, -73.6169), 'H3W': (45.4781, -73.6259), 'H3X': (45.4702, -73.6436),
-    'H3Y': (45.4811, -73.5923), 'H3Z': (45.4867, -73.5857),
-    'H4A': (45.4621, -73.6234), 'H4B': (45.4581, -73.6400), 'H4C': (45.4648, -73.5998),
-    'H4E': (45.4554, -73.5808), 'H4G': (45.4627, -73.5655), 'H4H': (45.4623, -73.5519),
-    'H4J': (45.5057, -73.6644), 'H4K': (45.5151, -73.6783), 'H4L': (45.5217, -73.6942),
-    'H4M': (45.5134, -73.7121), 'H4N': (45.5014, -73.6783), 'H4P': (45.4919, -73.6609),
-    'H4R': (45.4873, -73.6917), 'H4S': (45.4730, -73.6894), 'H4T': (45.4868, -73.6681),
-    'H4V': (45.4589, -73.6190), 'H4W': (45.4494, -73.6408), 'H4X': (45.4414, -73.6329),
-    'H4Y': (45.4567, -73.6600), 'H4Z': (45.5011, -73.5686),
-    'H5A': (45.5004, -73.5632), 'H5B': (45.5054, -73.5587),
-    'H8N': (45.4384, -73.6131), 'H8P': (45.4290, -73.6255), 'H8R': (45.4327, -73.6506),
-    'H8S': (45.4449, -73.6565), 'H8T': (45.4508, -73.6772), 'H8Y': (45.4628, -73.6843),
-    'H8Z': (45.4536, -73.6986), 'H9A': (45.4649, -73.7313), 'H9B': (45.4579, -73.7501),
-    'H9C': (45.4430, -73.7419), 'H9E': (45.4318, -73.7089), 'H9G': (45.4332, -73.7342),
-    'H9H': (45.4529, -73.7655), 'H9J': (45.4427, -73.7620), 'H9K': (45.4340, -73.7554),
-    'H9P': (45.4663, -73.7495), 'H9R': (45.4761, -73.7667), 'H9S': (45.4869, -73.7720),
-    'H9W': (45.4283, -73.7731), 'H9X': (45.4155, -73.8002),
-}
-
+# ============================================================================
+# API Routes - Quick Check
+# ============================================================================
 
 @api_bp.route('/quick-check/<postal_code>')
 @limiter.limit("30 per minute")
 def quick_check(postal_code):
-    """Quick status check by postal code."""
+    """Quick status check by postal code. Supports Montreal (H) and Quebec City (G)."""
     postal_code = postal_code.strip().upper().replace(' ', '')
 
     if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', postal_code):
         return jsonify({'error': 'Invalid postal code format'}), 400
 
     formatted_postal = f"{postal_code[:3]} {postal_code[3:]}"
-    fsa = postal_code[:3]
 
-    # Check if it's a Montreal postal code (starts with H)
-    if not postal_code.startswith('H'):
-        return jsonify({'error': 'This postal code is not in Montreal (must start with H)'}), 400
+    # Detect city from postal code prefix
+    try:
+        city = detect_city_from_postal(postal_code)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
     try:
-        lat, lon, location_name = None, None, None
+        from app.services import geocode_postal_code as service_geocode
+        from app.services import get_snow_status as service_get_snow_status
+        from app.services import get_waste_schedule as service_get_waste_schedule
 
-        # Try Nominatim first
-        lat, lon, location_name = geocode_postal_code_nominatim(postal_code)
+        # Geocode the postal code
+        location = service_geocode(postal_code)
 
-        # Fallback to FSA lookup table
-        if lat is None and fsa in MONTREAL_FSA_COORDS:
-            lat, lon = MONTREAL_FSA_COORDS[fsa]
-            location_name = f"Montreal ({fsa})"
-
-        if lat is None:
+        if not location:
             return jsonify({'error': 'Could not locate this postal code'}), 404
 
-        # Check Montreal bounds (expanded)
-        if not (45.3 <= lat <= 45.8 and -74.0 <= lon <= -73.3):
-            return jsonify({'error': 'This postal code is not in Montreal area'}), 400
+        lat, lon = location['lat'], location['lon']
 
-        # Get snow status
-        from app.services.planif_neige import get_status_for_street
-        from app.models import GeobaseCache
-
-        entry = GeobaseCache.query.first()
-        snow_status = None
-
-        if entry:
-            try:
-                snow_status = get_status_for_street(entry.cote_rue_id)
-            except:
-                pass
+        # Get snow status based on city
+        snow_status = service_get_snow_status(city=city, lat=lat, lon=lon)
 
         # Get waste schedule
         waste_schedule = None
         try:
-            from app.services.waste import get_schedule_for_location
-            waste_schedule = get_schedule_for_location(lat, lon)
-        except:
-            pass
+            waste_schedule = service_get_waste_schedule(city=city, lat=lat, lon=lon)
+        except Exception as e:
+            logger.warning(f"Could not get waste schedule: {e}")
+
+        # Build city-specific location name
+        if city == 'montreal':
+            location_name = f"Montreal ({postal_code[:3]})"
+        else:
+            location_name = f"Quebec City ({postal_code[:3]})"
 
         return jsonify({
             'postal_code': formatted_postal,
+            'city': city,
             'latitude': lat,
             'longitude': lon,
             'snow_status': snow_status or {'message': 'No data available'},
             'waste_schedule': waste_schedule,
-            'location_name': location_name or formatted_postal
+            'location_name': location_name
         })
 
     except Exception as e:
         logger.error(f"Error in quick check: {e}")
         return jsonify({'error': 'Failed to check status'}), 500
+
+
+# ============================================================================
+# City-Specific Endpoints
+# ============================================================================
+
+@api_bp.route('/montreal/snow-status/<postal_code>')
+@limiter.limit("30 per minute")
+def montreal_snow_status(postal_code):
+    """Get Montreal snow status for a postal code."""
+    postal_code = postal_code.strip().upper().replace(' ', '')
+
+    if not postal_code.startswith('H'):
+        return jsonify({'error': 'Montreal postal codes start with H'}), 400
+
+    try:
+        from app.services import get_snow_status as service_get_snow_status
+        from app.services import geocode_postal_code as service_geocode
+
+        location = service_geocode(postal_code)
+        if not location:
+            return jsonify({'error': 'Could not locate postal code'}), 404
+
+        status = service_get_snow_status(city='montreal', lat=location['lat'], lon=location['lon'])
+        return jsonify(status)
+
+    except Exception as e:
+        logger.error(f"Error getting Montreal snow status: {e}")
+        return jsonify({'error': 'Failed to get snow status'}), 500
+
+
+@api_bp.route('/quebec/snow-status/<postal_code>')
+@limiter.limit("30 per minute")
+def quebec_snow_status(postal_code):
+    """Get Quebec City snow status for a postal code."""
+    postal_code = postal_code.strip().upper().replace(' ', '')
+
+    if not postal_code.startswith('G'):
+        return jsonify({'error': 'Quebec City postal codes start with G'}), 400
+
+    try:
+        from app.services import get_snow_status as service_get_snow_status
+        from app.services import geocode_postal_code as service_geocode
+
+        location = service_geocode(postal_code)
+        if not location:
+            return jsonify({'error': 'Could not locate postal code'}), 404
+
+        status = service_get_snow_status(city='quebec', lat=location['lat'], lon=location['lon'])
+        return jsonify(status)
+
+    except Exception as e:
+        logger.error(f"Error getting Quebec City snow status: {e}")
+        return jsonify({'error': 'Failed to get snow status'}), 500
 
 
 # ============================================================================
@@ -473,6 +359,9 @@ def subscribe():
     postal_code = data.get('postal_code', '').strip().upper()
     latitude = data.get('latitude')
     longitude = data.get('longitude')
+    city = data.get('city')  # Optional, will be auto-detected
+    snow_alerts = data.get('snow_alerts', True)
+    waste_alerts = data.get('waste_alerts', False)
 
     # Validate email
     if not email or not validate_email(email):
@@ -481,7 +370,14 @@ def subscribe():
     # Validate postal code
     clean_postal = postal_code.replace(' ', '')
     if not re.match(r'^[A-Z]\d[A-Z]\d[A-Z]\d$', clean_postal):
-        return jsonify({'error': 'Valid Montreal postal code is required'}), 400
+        return jsonify({'error': 'Valid postal code is required'}), 400
+
+    # Auto-detect city from postal code if not provided
+    if not city:
+        try:
+            city = detect_city_from_postal(clean_postal)
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
 
     try:
         # Find or create subscriber
@@ -516,12 +412,15 @@ def subscribe():
                 'address_id': existing.id
             }), 409
 
-        # Create new address with postal code
+        # Create new address with city context
         address = Address(
             subscriber_id=subscriber.id,
+            city=city,
             postal_code=formatted_postal,
             latitude=latitude,
             longitude=longitude,
+            snow_alerts=snow_alerts,
+            waste_alerts=waste_alerts,
             label='Home'
         )
         db.session.add(address)
@@ -534,9 +433,12 @@ def subscribe():
         except Exception as e:
             logger.warning(f"Failed to send confirmation email: {e}")
 
+        city_display = 'Montreal' if city == 'montreal' else 'Quebec City'
+
         return jsonify({
             'success': True,
-            'message': 'Successfully subscribed to alerts',
+            'message': f'Successfully subscribed to {city_display} alerts',
+            'city': city,
             'subscriber_id': subscriber.id,
             'address_id': address.id,
             'unsubscribe_url': f"{current_app.config['APP_URL']}/unsubscribe/{subscriber.unsubscribe_token}"
@@ -548,6 +450,29 @@ def subscribe():
         return jsonify({'error': 'Subscription failed'}), 500
 
 
+@api_bp.route('/unsubscribe', methods=['POST'])
+@limiter.limit("10 per minute")
+def unsubscribe_api():
+    """Unsubscribe an email from all alerts."""
+    data = request.get_json()
+
+    if not data or 'email' not in data:
+        return jsonify({'error': 'Email is required'}), 400
+
+    email = data['email'].strip().lower()
+
+    subscriber = Subscriber.query.filter_by(email=email).first()
+
+    if not subscriber:
+        return jsonify({'error': 'Email not found'}), 404
+
+    subscriber.is_active = False
+    db.session.commit()
+
+    logger.info(f"Subscriber {email} unsubscribed via API")
+    return jsonify({'success': True, 'message': 'Successfully unsubscribed'})
+
+
 # ============================================================================
 # Admin Routes
 # ============================================================================
@@ -556,13 +481,16 @@ def subscribe():
 @require_admin_token
 def trigger_snow_check():
     """Manually trigger snow status check for all subscribers."""
+    city = request.args.get('city')  # Optional: filter by city
+
     try:
         from app.services.alerts import check_all_snow_statuses
-        result = check_all_snow_statuses()
+        result = check_all_snow_statuses(city=city)
 
-        logger.info(f"Manual snow check triggered: {result}")
+        logger.info(f"Manual snow check triggered for {city or 'all cities'}: {result}")
         return jsonify({
             'success': True,
+            'city': city or 'all',
             'result': result
         })
 
@@ -575,13 +503,16 @@ def trigger_snow_check():
 @require_admin_token
 def trigger_waste_check():
     """Manually trigger waste reminder check."""
+    city = request.args.get('city')  # Optional: filter by city
+
     try:
         from app.services.alerts import send_waste_reminders
-        result = send_waste_reminders()
+        result = send_waste_reminders(city=city)
 
-        logger.info(f"Manual waste check triggered: {result}")
+        logger.info(f"Manual waste check triggered for {city or 'all cities'}: {result}")
         return jsonify({
             'success': True,
+            'city': city or 'all',
             'result': result
         })
 
@@ -593,9 +524,9 @@ def trigger_waste_check():
 @admin_bp.route('/refresh-geobase')
 @require_admin_token
 def refresh_geobase():
-    """Manually refresh Geobase cache."""
+    """Manually refresh Montreal Geobase cache."""
     try:
-        from app.services.geobase import refresh_cache
+        from app.services.montreal.geobase import refresh_cache
         result = refresh_cache()
 
         logger.info(f"Geobase cache refreshed: {result}")
@@ -616,6 +547,11 @@ def get_stats():
     try:
         active_subscribers = Subscriber.query.filter_by(is_active=True).count()
         total_addresses = Address.query.count()
+
+        # City breakdown
+        montreal_addresses = Address.query.filter_by(city='montreal').count()
+        quebec_addresses = Address.query.filter_by(city='quebec').count()
+
         alerts_today = AlertHistory.query.filter(
             AlertHistory.sent_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)
         ).count()
@@ -624,6 +560,10 @@ def get_stats():
         return jsonify({
             'active_subscribers': active_subscribers,
             'total_addresses': total_addresses,
+            'addresses_by_city': {
+                'montreal': montreal_addresses,
+                'quebec': quebec_addresses
+            },
             'alerts_sent_today': alerts_today,
             'geobase_cache_entries': geobase_entries,
             'timestamp': datetime.utcnow().isoformat()

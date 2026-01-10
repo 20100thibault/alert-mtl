@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alert MTL - Montreal Snow & Waste Alerts</title>
+    <title>Alert Quebec - Snow & Waste Alerts</title>
     <style>
         :root {
             --text-primary: #1d1d1f;
@@ -13,8 +13,12 @@
             --bg-secondary: #f5f5f7;
             --bg-elevated: #ffffff;
             --border-color: rgba(0, 0, 0, 0.08);
+
+            /* City-specific colors - defaults to Montreal */
             --accent: #0071e3;
             --accent-hover: #0077ed;
+            --accent-rgb: 0, 113, 227;
+
             --success: #34c759;
             --success-dark: #248a3d;
             --error: #ff3b30;
@@ -24,6 +28,13 @@
             --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
             --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
             --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Quebec City theme */
+        body.quebec {
+            --accent: #5856d6;
+            --accent-hover: #6260e0;
+            --accent-rgb: 88, 86, 214;
         }
 
         * {
@@ -50,21 +61,12 @@
         /* Hero Section */
         .hero {
             background: linear-gradient(180deg, #e8f4fc 0%, #e8f5e9 50%, var(--bg-primary) 100%);
-            padding: 80px 24px 60px;
+            padding: 60px 24px 50px;
             text-align: center;
         }
 
-        .hero-icon {
-            width: 88px;
-            height: 88px;
-            margin: 0 auto 24px;
-            background: linear-gradient(145deg, #ffffff 0%, #f0f5ff 100%);
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow-md);
-            font-size: 44px;
+        body.quebec .hero {
+            background: linear-gradient(180deg, #ebe8fc 0%, #f0e8f5 50%, var(--bg-primary) 100%);
         }
 
         .hero h1 {
@@ -85,6 +87,89 @@
             max-width: 440px;
             margin: 0 auto;
             line-height: 1.5;
+        }
+
+        /* City Toggle Section */
+        .city-toggle-section {
+            margin: 24px auto 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .city-icons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
+        }
+
+        .city-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .city-option-icon {
+            font-size: 48px;
+            line-height: 1;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+            transform: scale(1);
+        }
+
+        .city-option.active .city-option-icon {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .city-option-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .city-option.active .city-option-label {
+            color: var(--accent);
+        }
+
+        /* iOS-style Toggle Switch */
+        .city-toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .city-toggle {
+            width: 60px;
+            height: 34px;
+            background: var(--accent);
+            border-radius: 17px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .city-toggle::after {
+            content: '';
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .city-toggle.quebec::after {
+            transform: translateX(26px);
         }
 
         /* Main Content */
@@ -112,7 +197,11 @@
         /* Quick Check Card */
         .quick-check-card {
             background: linear-gradient(135deg, #f0f7ff 0%, #f5fff5 100%);
-            border: 2px solid rgba(0, 113, 227, 0.15);
+            border: 2px solid rgba(var(--accent-rgb), 0.15);
+        }
+
+        body.quebec .quick-check-card {
+            background: linear-gradient(135deg, #f0f0ff 0%, #f5f0f8 100%);
         }
 
         .quick-check-header {
@@ -177,7 +266,7 @@
         input[type="text"]:focus {
             border-color: var(--accent);
             background: var(--bg-elevated);
-            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+            box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.1);
         }
 
         input::placeholder {
@@ -533,7 +622,7 @@
         .alert-card.selected {
             background: var(--bg-elevated);
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
         }
 
         .alert-card.selected.snow {
@@ -737,7 +826,7 @@
         /* Responsive */
         @media (max-width: 540px) {
             .hero {
-                padding: 60px 20px 40px;
+                padding: 50px 20px 40px;
             }
 
             .hero h1 {
@@ -746,6 +835,28 @@
 
             .hero p {
                 font-size: 17px;
+            }
+
+            .city-icons {
+                gap: 40px;
+            }
+
+            .city-option-icon {
+                font-size: 40px;
+            }
+
+            .city-toggle {
+                width: 54px;
+                height: 30px;
+            }
+
+            .city-toggle::after {
+                width: 24px;
+                height: 24px;
+            }
+
+            .city-toggle.quebec::after {
+                transform: translateX(24px);
             }
 
             .main {
@@ -809,11 +920,25 @@
     <div class="page">
         <!-- Hero -->
         <header class="hero">
-            <div class="hero-icon">
-                <span>🏙️</span>
+            <h1>Alert Quebec</h1>
+            <p id="heroDescription">Get notified about snow removal and waste collection for your address.</p>
+
+            <!-- City Toggle -->
+            <div class="city-toggle-section">
+                <div class="city-icons">
+                    <div class="city-option active" data-city="montreal" onclick="setCity('montreal')">
+                        <span class="city-option-icon">🏙️</span>
+                        <span class="city-option-label">Montreal</span>
+                    </div>
+                    <div class="city-option" data-city="quebec" onclick="setCity('quebec')">
+                        <span class="city-option-icon">🏰</span>
+                        <span class="city-option-label">Quebec City</span>
+                    </div>
+                </div>
+                <div class="city-toggle-wrapper">
+                    <div id="cityToggle" class="city-toggle" onclick="toggleCity()"></div>
+                </div>
             </div>
-            <h1>Alert MTL</h1>
-            <p>Get notified about snow removal and waste collection for your Montreal address.</p>
         </header>
 
         <!-- Main Content -->
@@ -1006,11 +1131,89 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>A service for Montreal residents. Data from <a href="https://donnees.montreal.ca" target="_blank">Ville de Montréal</a>.</p>
+            <p id="footerText">Data from <a id="footerLink" href="https://donnees.montreal.ca" target="_blank">Ville de Montreal</a>.</p>
         </footer>
     </div>
 
     <script>
+        // City state
+        let currentCity = localStorage.getItem('selectedCity') || 'montreal';
+
+        // City configuration
+        const cityConfig = {
+            montreal: {
+                name: 'Montreal',
+                postalPlaceholder: 'H2X 1Y4',
+                postalPrefix: 'H',
+                footerText: 'Ville de Montreal',
+                footerUrl: 'https://donnees.montreal.ca'
+            },
+            quebec: {
+                name: 'Quebec City',
+                postalPlaceholder: 'G1R 4P5',
+                postalPrefix: 'G',
+                footerText: 'Ville de Quebec',
+                footerUrl: 'https://www.ville.quebec.qc.ca/citoyens/deneigement/'
+            }
+        };
+
+        // Initialize city on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            applyCity(currentCity);
+        });
+
+        function setCity(city) {
+            currentCity = city;
+            localStorage.setItem('selectedCity', city);
+            applyCity(city);
+        }
+
+        function toggleCity() {
+            const newCity = currentCity === 'montreal' ? 'quebec' : 'montreal';
+            setCity(newCity);
+        }
+
+        function applyCity(city) {
+            const config = cityConfig[city];
+
+            // Update body class for theming
+            document.body.classList.remove('montreal', 'quebec');
+            document.body.classList.add(city);
+
+            // Update toggle
+            const toggle = document.getElementById('cityToggle');
+            toggle.classList.remove('montreal', 'quebec');
+            toggle.classList.add(city);
+
+            // Update city icons
+            document.querySelectorAll('.city-option').forEach(el => {
+                el.classList.remove('active');
+                if (el.dataset.city === city) {
+                    el.classList.add('active');
+                }
+            });
+
+            // Update placeholders
+            document.getElementById('quickPostalCode').placeholder = config.postalPlaceholder;
+            document.getElementById('postalCode').placeholder = config.postalPlaceholder;
+
+            // Update footer
+            document.getElementById('footerLink').textContent = config.footerText;
+            document.getElementById('footerLink').href = config.footerUrl;
+
+            // Clear results when switching cities
+            document.getElementById('resultsSection').classList.remove('visible');
+            document.getElementById('checkMessage').className = 'message';
+        }
+
+        // Detect city from postal code prefix
+        function detectCityFromPostal(postalCode) {
+            const prefix = postalCode.charAt(0).toUpperCase();
+            if (prefix === 'H') return 'montreal';
+            if (prefix === 'G') return 'quebec';
+            return null;
+        }
+
         // Format postal code as user types
         function formatPostalCode(input) {
             let value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1018,6 +1221,14 @@
                 value = value.slice(0, 3) + ' ' + value.slice(3, 6);
             }
             input.value = value;
+
+            // Auto-detect city from postal code prefix
+            if (value.length >= 1) {
+                const detectedCity = detectCityFromPostal(value);
+                if (detectedCity && detectedCity !== currentCity) {
+                    setCity(detectedCity);
+                }
+            }
         }
 
         document.getElementById('quickPostalCode').addEventListener('input', (e) => formatPostalCode(e.target));
@@ -1057,7 +1268,7 @@
 
                 btnText.textContent = 'Checking status...';
 
-                const response = await fetch(`/api/snow-status?lat=${lat}&lon=${lon}`);
+                const response = await fetch(`/api/snow-status?lat=${lat}&lon=${lon}&city=${currentCity}`);
                 const data = await response.json();
 
                 if (response.ok) {
@@ -1085,8 +1296,15 @@
             // Validate format
             const cleanPostal = postalCode.replace(/\s/g, '');
             if (!/^[A-Z]\d[A-Z]\d[A-Z]\d$/i.test(cleanPostal)) {
-                showMessage('checkMessage', 'Please enter a valid postal code (e.g., H2X 1Y4)', 'error');
+                showMessage('checkMessage', 'Please enter a valid postal code (e.g., ' + cityConfig[currentCity].postalPlaceholder + ')', 'error');
                 return;
+            }
+
+            // Validate city prefix matches
+            const detectedCity = detectCityFromPostal(cleanPostal);
+            if (detectedCity && detectedCity !== currentCity) {
+                // Auto-switch to detected city
+                setCity(detectedCity);
             }
 
             btn.disabled = true;
@@ -1118,7 +1336,7 @@
             const grid = document.getElementById('resultsGrid');
 
             // Update header
-            document.getElementById('resultsLocation').textContent = data.location_name || 'Montreal';
+            document.getElementById('resultsLocation').textContent = data.location_name || cityConfig[currentCity].name;
             document.getElementById('resultsPostal').textContent = data.postal_code;
 
             grid.innerHTML = '';
@@ -1129,11 +1347,18 @@
 
             const snowCard = document.createElement('div');
             snowCard.className = 'result-card snow';
+
+            // Quebec City displays flashing lights info differently
+            let snowMessage = snowStatus.display?.en || snowStatus.message || 'No operation scheduled';
+            if (data.city === 'quebec' && snowStatus.lights_nearby) {
+                snowMessage = `${snowStatus.lights_nearby} flashing lights nearby`;
+            }
+
             snowCard.innerHTML = `
                 <div class="result-card-icon">❄️</div>
                 <div class="result-card-content">
                     <div class="result-card-label">Snow Removal</div>
-                    <div class="result-card-value">${snowStatus.display?.en || snowStatus.message || 'No operation scheduled'}</div>
+                    <div class="result-card-value">${snowMessage}</div>
                 </div>
                 <span class="result-card-status ${hasOperation ? 'active' : 'clear'}">
                     ${hasOperation ? 'Active' : 'Clear'}
@@ -1244,13 +1469,14 @@
                     return;
                 }
 
-                // Subscribe with postal code info
+                // Subscribe with postal code info and city
                 const response = await fetch('/api/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         email: email,
                         postal_code: postalCode,
+                        city: currentCity,
                         latitude: geocodeData.latitude,
                         longitude: geocodeData.longitude,
                         snow_alerts: snowChecked,
