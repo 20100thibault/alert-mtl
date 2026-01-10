@@ -1108,6 +1108,428 @@
           ]
         }
       ]
+    },
+    {
+      "id": "phase-13",
+      "name": "Montreal Waste Schedule Service (Rearchitecture)",
+      "tasks": [
+        {
+          "id": "task-13.1",
+          "name": "Create Montreal waste_schedule.py module",
+          "microtasks": [
+            {
+              "id": "mt-13.1.1",
+              "name": "Create app/services/montreal/waste_schedule.py file with module docstring",
+              "tests": [{ "type": "unit", "description": "File exists and is importable", "file": "tests/test_montreal_waste.py::test_module_import" }]
+            },
+            {
+              "id": "mt-13.1.2",
+              "name": "Define MONTREAL_FSA_DAYS dictionary with 40+ FSA mappings",
+              "tests": [{ "type": "unit", "description": "Dict has H2V, H2J, H1X, H4A keys", "file": "tests/test_montreal_waste.py::test_fsa_dict_coverage" }]
+            },
+            {
+              "id": "mt-13.1.3",
+              "name": "Define CITY_WEBSITE_EN and CITY_WEBSITE_FR constants",
+              "tests": [{ "type": "unit", "description": "Constants are valid URLs", "file": "tests/test_montreal_waste.py::test_website_constants" }]
+            }
+          ]
+        },
+        {
+          "id": "task-13.2",
+          "name": "Implement get_schedule(postal_code) function",
+          "microtasks": [
+            {
+              "id": "mt-13.2.1",
+              "name": "Extract FSA from postal code (first 3 chars, uppercase, no spaces)",
+              "tests": [{ "type": "unit", "description": "H2V 1V5 -> H2V", "file": "tests/test_montreal_waste.py::test_fsa_extraction" }]
+            },
+            {
+              "id": "mt-13.2.2",
+              "name": "Look up collection day from MONTREAL_FSA_DAYS",
+              "tests": [{ "type": "unit", "description": "H2V returns Tuesday", "file": "tests/test_montreal_waste.py::test_h2v_tuesday" }]
+            },
+            {
+              "id": "mt-13.2.3",
+              "name": "Calculate next garbage collection date",
+              "tests": [{ "type": "unit", "description": "Returns future date on correct weekday", "file": "tests/test_montreal_waste.py::test_next_garbage_date" }]
+            },
+            {
+              "id": "mt-13.2.4",
+              "name": "Calculate next recycling collection date (bi-weekly)",
+              "tests": [{ "type": "unit", "description": "Returns date on even/odd week", "file": "tests/test_montreal_waste.py::test_next_recycling_date" }]
+            },
+            {
+              "id": "mt-13.2.5",
+              "name": "Format next_collection_display (Today, Tomorrow, This X, Next X)",
+              "tests": [{ "type": "unit", "description": "Formats correctly for various dates", "file": "tests/test_montreal_waste.py::test_display_format" }]
+            },
+            {
+              "id": "mt-13.2.6",
+              "name": "Return standardized success response with all fields",
+              "tests": [{ "type": "unit", "description": "Response has success, city, garbage, recycling keys", "file": "tests/test_montreal_waste.py::test_response_structure" }]
+            }
+          ]
+        },
+        {
+          "id": "task-13.3",
+          "name": "Implement error handling",
+          "microtasks": [
+            {
+              "id": "mt-13.3.1",
+              "name": "Return error response for unknown FSA",
+              "tests": [{ "type": "unit", "description": "H0A returns error response", "file": "tests/test_montreal_waste.py::test_unknown_fsa" }]
+            },
+            {
+              "id": "mt-13.3.2",
+              "name": "Return error response for invalid postal code format",
+              "tests": [{ "type": "unit", "description": "12345 returns error", "file": "tests/test_montreal_waste.py::test_invalid_postal" }]
+            },
+            {
+              "id": "mt-13.3.3",
+              "name": "Return error response for None/empty postal code",
+              "tests": [{ "type": "unit", "description": "None returns error", "file": "tests/test_montreal_waste.py::test_none_postal" }]
+            },
+            {
+              "id": "mt-13.3.4",
+              "name": "Include city_website link in error response",
+              "tests": [{ "type": "unit", "description": "Error has city_website field", "file": "tests/test_montreal_waste.py::test_error_has_website" }]
+            }
+          ]
+        },
+        {
+          "id": "task-13.4",
+          "name": "Test Montreal waste schedule with real postal codes",
+          "microtasks": [
+            {
+              "id": "mt-13.4.1",
+              "name": "Test H2V 1V5 (Mile End) returns Tuesday",
+              "tests": [{ "type": "integration", "description": "API returns Tuesday for H2V", "file": "tests/test_montreal_waste.py::test_h2v_integration" }]
+            },
+            {
+              "id": "mt-13.4.2",
+              "name": "Test H2J 1A1 (Plateau) returns Monday",
+              "tests": [{ "type": "integration", "description": "API returns Monday for H2J", "file": "tests/test_montreal_waste.py::test_h2j_integration" }]
+            },
+            {
+              "id": "mt-13.4.3",
+              "name": "Test H1X 1A1 (Rosemont) returns Wednesday",
+              "tests": [{ "type": "integration", "description": "API returns Wednesday for H1X", "file": "tests/test_montreal_waste.py::test_h1x_integration" }]
+            },
+            {
+              "id": "mt-13.4.4",
+              "name": "Test H4A 1A1 (NDG) returns Wednesday",
+              "tests": [{ "type": "integration", "description": "API returns Wednesday for H4A", "file": "tests/test_montreal_waste.py::test_h4a_integration" }]
+            },
+            {
+              "id": "mt-13.4.5",
+              "name": "Test H3B 1A1 (Downtown) returns Monday",
+              "tests": [{ "type": "integration", "description": "API returns Monday for H3B", "file": "tests/test_montreal_waste.py::test_h3b_integration" }]
+            },
+            {
+              "id": "mt-13.4.6",
+              "name": "Test H1G 1A1 (Montreal-Nord) returns Monday",
+              "tests": [{ "type": "integration", "description": "API returns Monday for H1G", "file": "tests/test_montreal_waste.py::test_h1g_integration" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-14",
+      "name": "Quebec City Waste Schedule Service (Rearchitecture)",
+      "tasks": [
+        {
+          "id": "task-14.1",
+          "name": "Create Quebec waste_schedule.py module",
+          "microtasks": [
+            {
+              "id": "mt-14.1.1",
+              "name": "Create app/services/quebec/waste_schedule.py file with module docstring",
+              "tests": [{ "type": "unit", "description": "File exists and is importable", "file": "tests/test_quebec_waste.py::test_module_import" }]
+            },
+            {
+              "id": "mt-14.1.2",
+              "name": "Define QUEBEC_FSA_DAYS dictionary with all G1/G2/G3 FSA mappings",
+              "tests": [{ "type": "unit", "description": "Dict has G1V, G1K, G1G, G2B keys", "file": "tests/test_quebec_waste.py::test_fsa_dict_coverage" }]
+            },
+            {
+              "id": "mt-14.1.3",
+              "name": "Define CITY_WEBSITE constant (ville.quebec.qc.ca/services/info-collecte)",
+              "tests": [{ "type": "unit", "description": "Constant is valid URL", "file": "tests/test_quebec_waste.py::test_website_constant" }]
+            }
+          ]
+        },
+        {
+          "id": "task-14.2",
+          "name": "Implement get_schedule(postal_code) function",
+          "microtasks": [
+            {
+              "id": "mt-14.2.1",
+              "name": "Extract FSA from postal code (first 3 chars, uppercase, no spaces)",
+              "tests": [{ "type": "unit", "description": "G1V 1J8 -> G1V", "file": "tests/test_quebec_waste.py::test_fsa_extraction" }]
+            },
+            {
+              "id": "mt-14.2.2",
+              "name": "Look up collection day from QUEBEC_FSA_DAYS",
+              "tests": [{ "type": "unit", "description": "G1V returns Thursday", "file": "tests/test_quebec_waste.py::test_g1v_thursday" }]
+            },
+            {
+              "id": "mt-14.2.3",
+              "name": "Calculate next garbage collection date",
+              "tests": [{ "type": "unit", "description": "Returns future date on correct weekday", "file": "tests/test_quebec_waste.py::test_next_garbage_date" }]
+            },
+            {
+              "id": "mt-14.2.4",
+              "name": "Calculate next recycling collection date (bi-weekly)",
+              "tests": [{ "type": "unit", "description": "Returns date on even/odd week", "file": "tests/test_quebec_waste.py::test_next_recycling_date" }]
+            },
+            {
+              "id": "mt-14.2.5",
+              "name": "Format next_collection_display (Today, Tomorrow, This X, Next X)",
+              "tests": [{ "type": "unit", "description": "Formats correctly for various dates", "file": "tests/test_quebec_waste.py::test_display_format" }]
+            },
+            {
+              "id": "mt-14.2.6",
+              "name": "Return standardized success response with all fields",
+              "tests": [{ "type": "unit", "description": "Response has success, city, garbage, recycling keys", "file": "tests/test_quebec_waste.py::test_response_structure" }]
+            }
+          ]
+        },
+        {
+          "id": "task-14.3",
+          "name": "Implement error handling",
+          "microtasks": [
+            {
+              "id": "mt-14.3.1",
+              "name": "Return error response for unknown FSA",
+              "tests": [{ "type": "unit", "description": "G0A returns error response", "file": "tests/test_quebec_waste.py::test_unknown_fsa" }]
+            },
+            {
+              "id": "mt-14.3.2",
+              "name": "Return error response for invalid postal code format",
+              "tests": [{ "type": "unit", "description": "12345 returns error", "file": "tests/test_quebec_waste.py::test_invalid_postal" }]
+            },
+            {
+              "id": "mt-14.3.3",
+              "name": "Return error response for None/empty postal code",
+              "tests": [{ "type": "unit", "description": "None returns error", "file": "tests/test_quebec_waste.py::test_none_postal" }]
+            },
+            {
+              "id": "mt-14.3.4",
+              "name": "Include city_website link in error response",
+              "tests": [{ "type": "unit", "description": "Error has city_website field", "file": "tests/test_quebec_waste.py::test_error_has_website" }]
+            }
+          ]
+        },
+        {
+          "id": "task-14.4",
+          "name": "Test Quebec waste schedule with real postal codes",
+          "microtasks": [
+            {
+              "id": "mt-14.4.1",
+              "name": "Test G1V 1J8 (Sainte-Foy) returns Thursday",
+              "tests": [{ "type": "integration", "description": "API returns Thursday for G1V", "file": "tests/test_quebec_waste.py::test_g1v_integration" }]
+            },
+            {
+              "id": "mt-14.4.2",
+              "name": "Test G1K 1A1 (Cité-Limoilou) returns Monday",
+              "tests": [{ "type": "integration", "description": "API returns Monday for G1K", "file": "tests/test_quebec_waste.py::test_g1k_integration" }]
+            },
+            {
+              "id": "mt-14.4.3",
+              "name": "Test G1G 1A1 (Charlesbourg) returns Friday",
+              "tests": [{ "type": "integration", "description": "API returns Friday for G1G", "file": "tests/test_quebec_waste.py::test_g1g_integration" }]
+            },
+            {
+              "id": "mt-14.4.4",
+              "name": "Test G2B 1A1 (Les Rivières) returns Wednesday",
+              "tests": [{ "type": "integration", "description": "API returns Wednesday for G2B", "file": "tests/test_quebec_waste.py::test_g2b_integration" }]
+            },
+            {
+              "id": "mt-14.4.5",
+              "name": "Test G1B 1A1 (Beauport) returns Wednesday",
+              "tests": [{ "type": "integration", "description": "API returns Wednesday for G1B", "file": "tests/test_quebec_waste.py::test_g1b_integration" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-15",
+      "name": "Waste Schedule Integration & Cleanup",
+      "tasks": [
+        {
+          "id": "task-15.1",
+          "name": "Update dispatcher to use new services",
+          "microtasks": [
+            {
+              "id": "mt-15.1.1",
+              "name": "Update get_waste_schedule() to import from montreal/waste_schedule.py",
+              "tests": [{ "type": "unit", "description": "Montreal route uses new module", "file": "tests/test_dispatcher.py::test_montreal_waste_route" }]
+            },
+            {
+              "id": "mt-15.1.2",
+              "name": "Update get_waste_schedule() to import from quebec/waste_schedule.py",
+              "tests": [{ "type": "unit", "description": "Quebec route uses new module", "file": "tests/test_dispatcher.py::test_quebec_waste_route" }]
+            },
+            {
+              "id": "mt-15.1.3",
+              "name": "Remove old _get_montreal_waste_schedule() function",
+              "tests": [{ "type": "unit", "description": "Old function no longer exists", "file": "tests/test_dispatcher.py::test_old_mtl_removed" }]
+            },
+            {
+              "id": "mt-15.1.4",
+              "name": "Remove old _get_quebec_waste_schedule() function",
+              "tests": [{ "type": "unit", "description": "Old function no longer exists", "file": "tests/test_dispatcher.py::test_old_qc_removed" }]
+            },
+            {
+              "id": "mt-15.1.5",
+              "name": "Remove old FSA mapping dictionaries from dispatcher",
+              "tests": [{ "type": "unit", "description": "MONTREAL_FSA_DAYS not in dispatcher", "file": "tests/test_dispatcher.py::test_fsa_moved" }]
+            }
+          ]
+        },
+        {
+          "id": "task-15.2",
+          "name": "Update frontend to show disclaimer",
+          "microtasks": [
+            {
+              "id": "mt-15.2.1",
+              "name": "Add disclaimer div below waste schedule cards",
+              "tests": [{ "type": "e2e", "description": "Disclaimer visible after schedule loads", "file": "tests/test_ui.py::test_waste_disclaimer_visible" }]
+            },
+            {
+              "id": "mt-15.2.2",
+              "name": "Style disclaimer with muted text and info icon",
+              "tests": [{ "type": "e2e", "description": "Disclaimer has correct styling", "file": "tests/test_ui.py::test_waste_disclaimer_style" }]
+            },
+            {
+              "id": "mt-15.2.3",
+              "name": "Add link to city website in disclaimer",
+              "tests": [{ "type": "e2e", "description": "Disclaimer link works", "file": "tests/test_ui.py::test_waste_disclaimer_link" }]
+            },
+            {
+              "id": "mt-15.2.4",
+              "name": "Translate disclaimer text (EN/FR)",
+              "tests": [{ "type": "e2e", "description": "Disclaimer translates on language toggle", "file": "tests/test_ui.py::test_waste_disclaimer_i18n" }]
+            }
+          ]
+        },
+        {
+          "id": "task-15.3",
+          "name": "Update frontend error handling",
+          "microtasks": [
+            {
+              "id": "mt-15.3.1",
+              "name": "Check for success:false in waste schedule response",
+              "tests": [{ "type": "e2e", "description": "Error state detected", "file": "tests/test_ui.py::test_waste_error_detection" }]
+            },
+            {
+              "id": "mt-15.3.2",
+              "name": "Display error message from API response",
+              "tests": [{ "type": "e2e", "description": "Error message shown to user", "file": "tests/test_ui.py::test_waste_error_message" }]
+            },
+            {
+              "id": "mt-15.3.3",
+              "name": "Show 'Check city website' button with link",
+              "tests": [{ "type": "e2e", "description": "City website button visible on error", "file": "tests/test_ui.py::test_waste_error_button" }]
+            },
+            {
+              "id": "mt-15.3.4",
+              "name": "Use correct language for error message",
+              "tests": [{ "type": "e2e", "description": "Error uses current language", "file": "tests/test_ui.py::test_waste_error_i18n" }]
+            }
+          ]
+        },
+        {
+          "id": "task-15.4",
+          "name": "Remove old waste code",
+          "microtasks": [
+            {
+              "id": "mt-15.4.1",
+              "name": "Remove or deprecate app/services/montreal/waste.py",
+              "tests": [{ "type": "unit", "description": "Old waste.py not imported", "file": "tests/test_cleanup.py::test_old_waste_removed" }]
+            },
+            {
+              "id": "mt-15.4.2",
+              "name": "Remove unused GEOJSON fetch functions",
+              "tests": [{ "type": "unit", "description": "fetch_waste_geojson not in codebase", "file": "tests/test_cleanup.py::test_geojson_removed" }]
+            },
+            {
+              "id": "mt-15.4.3",
+              "name": "Remove point_in_polygon and related geometry code",
+              "tests": [{ "type": "unit", "description": "Geometry functions removed", "file": "tests/test_cleanup.py::test_geometry_removed" }]
+            },
+            {
+              "id": "mt-15.4.4",
+              "name": "Update __init__.py exports if needed",
+              "tests": [{ "type": "unit", "description": "Exports are correct", "file": "tests/test_cleanup.py::test_exports_updated" }]
+            }
+          ]
+        },
+        {
+          "id": "task-15.5",
+          "name": "End-to-end testing",
+          "microtasks": [
+            {
+              "id": "mt-15.5.1",
+              "name": "Test Montreal quick check returns different days for different postal codes",
+              "tests": [{ "type": "e2e", "description": "H2V vs H2J show different days", "file": "tests/test_e2e.py::test_montreal_different_days" }]
+            },
+            {
+              "id": "mt-15.5.2",
+              "name": "Test Quebec quick check returns different days for different postal codes",
+              "tests": [{ "type": "e2e", "description": "G1V vs G1K show different days", "file": "tests/test_e2e.py::test_quebec_different_days" }]
+            },
+            {
+              "id": "mt-15.5.3",
+              "name": "Test unknown postal code shows error with website link",
+              "tests": [{ "type": "e2e", "description": "H0Z shows error state", "file": "tests/test_e2e.py::test_unknown_postal_error" }]
+            },
+            {
+              "id": "mt-15.5.4",
+              "name": "Test disclaimer appears for both cities",
+              "tests": [{ "type": "e2e", "description": "Disclaimer visible for both", "file": "tests/test_e2e.py::test_disclaimer_both_cities" }]
+            },
+            {
+              "id": "mt-15.5.5",
+              "name": "Verify no cross-contamination between city services",
+              "tests": [{ "type": "unit", "description": "Montreal module has no Quebec imports", "file": "tests/test_e2e.py::test_no_cross_imports" }]
+            }
+          ]
+        },
+        {
+          "id": "task-15.6",
+          "name": "Deploy and verify",
+          "microtasks": [
+            {
+              "id": "mt-15.6.1",
+              "name": "Commit and push all changes",
+              "tests": [{ "type": "manual", "description": "Git push successful" }]
+            },
+            {
+              "id": "mt-15.6.2",
+              "name": "Verify Render deployment succeeds",
+              "tests": [{ "type": "manual", "description": "Deployment completes without errors" }]
+            },
+            {
+              "id": "mt-15.6.3",
+              "name": "Test live API with H2V1V5 returns Tuesday",
+              "tests": [{ "type": "manual", "description": "curl API returns expected result" }]
+            },
+            {
+              "id": "mt-15.6.4",
+              "name": "Test live API with G1V1J8 returns Thursday",
+              "tests": [{ "type": "manual", "description": "curl API returns expected result" }]
+            },
+            {
+              "id": "mt-15.6.5",
+              "name": "Test live website shows correct schedules for both cities",
+              "tests": [{ "type": "manual", "description": "UI displays correctly" }]
+            }
+          ]
+        }
+      ]
     }
   ],
   "additional_suggestions": [

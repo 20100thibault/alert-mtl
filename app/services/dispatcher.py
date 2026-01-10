@@ -145,12 +145,14 @@ def get_waste_schedule(city: str = None, postal_code: str = None, lat: float = N
     """
     Get waste collection schedule for a location.
 
+    Routes to city-specific waste schedule services.
+
     Args:
         city: 'montreal' or 'quebec'
         postal_code: Canadian postal code
-        lat: Latitude
-        lon: Longitude
-        waste_zone_id: Quebec City waste zone ID (optional)
+        lat: Latitude (optional, not used in FSA-based lookup)
+        lon: Longitude (optional, not used in FSA-based lookup)
+        waste_zone_id: Quebec City waste zone ID (optional, deprecated)
 
     Returns:
         Dict with waste schedule information
@@ -164,324 +166,28 @@ def get_waste_schedule(city: str = None, postal_code: str = None, lat: float = N
                 city = 'montreal'  # Default to Montreal
 
         if city == 'montreal':
-            result = _get_montreal_waste_schedule(lat, lon, postal_code)
-            if result:
-                return result
-            # If Montreal returns None, return inline fallback
-            return _get_montreal_default_schedule(postal_code)
+            from app.services.montreal.waste_schedule import get_schedule as mtl_schedule
+            return mtl_schedule(postal_code)
         elif city == 'quebec':
-            result = _get_quebec_waste_schedule(waste_zone_id, postal_code, lat, lon)
-            if result:
-                return result
-            return _get_quebec_default_schedule(postal_code)
+            from app.services.quebec.waste_schedule import get_schedule as qc_schedule
+            return qc_schedule(postal_code)
 
-        return _get_inline_mock_schedule()
+        # Unknown city - return error
+        return {
+            "success": False,
+            "error": "unknown_city",
+            "message": "Could not determine city from postal code.",
+            "message_fr": "Impossible de déterminer la ville à partir du code postal."
+        }
 
     except Exception as e:
         logger.error(f"get_waste_schedule error: {e}")
-        # Ultimate fallback - return basic schedule
-        return _get_inline_mock_schedule()
-
-
-def _get_inline_mock_schedule() -> Dict[str, Any]:
-    """Inline mock schedule that doesn't require any imports."""
-    return {
-        'garbage': {
-            'type': 'garbage',
-            'name': 'Garbage',
-            'day_of_week': 'Tuesday',
-            'next_collection_display': 'Tuesday'
-        },
-        'recycling': {
-            'type': 'recycling',
-            'name': 'Recycling',
-            'day_of_week': 'Tuesday',
-            'next_collection_display': 'Tuesday'
+        return {
+            "success": False,
+            "error": "service_error",
+            "message": "Unable to retrieve waste schedule. Please try again.",
+            "message_fr": "Impossible de récupérer l'horaire de collecte. Veuillez réessayer."
         }
-    }
-
-
-def _get_montreal_waste_schedule(lat: float, lon: float, postal_code: str = None) -> Optional[Dict[str, Any]]:
-    """Get waste schedule from Montreal GEOJSON service."""
-    try:
-        from app.services.montreal.waste import get_schedule_for_location
-
-        if lat and lon:
-            result = get_schedule_for_location(lat, lon)
-            if result:
-                return result
-
-        # Fallback to FSA-based schedule
-        return _get_montreal_default_schedule(postal_code)
-
-    except Exception as e:
-        logger.error(f"Montreal waste schedule error: {e}")
-        return _get_montreal_default_schedule(postal_code)
-
-
-# Montreal FSA to collection day mapping
-# Based on borough/arrondissement typical collection patterns
-MONTREAL_FSA_DAYS = {
-    # Plateau-Mont-Royal area - Monday
-    'H2J': ('Monday', 0), 'H2T': ('Monday', 0), 'H2W': ('Monday', 0),
-    # Mile End / Outremont - Tuesday
-    'H2V': ('Tuesday', 1), 'H2S': ('Tuesday', 1), 'H3N': ('Tuesday', 1),
-    # Rosemont-La Petite-Patrie - Wednesday
-    'H1X': ('Wednesday', 2), 'H1Y': ('Wednesday', 2), 'H2G': ('Wednesday', 2), 'H2R': ('Wednesday', 2),
-    # Villeray/Saint-Michel - Thursday
-    'H2P': ('Thursday', 3), 'H2M': ('Thursday', 3), 'H2E': ('Thursday', 3),
-    # Ahuntsic-Cartierville - Friday
-    'H2N': ('Friday', 4), 'H2C': ('Friday', 4), 'H3L': ('Friday', 4), 'H3M': ('Friday', 4),
-    # Downtown - Monday
-    'H3A': ('Monday', 0), 'H3B': ('Monday', 0), 'H3C': ('Monday', 0), 'H3G': ('Monday', 0), 'H3H': ('Monday', 0),
-    # NDG / Côte-des-Neiges - Wednesday
-    'H3S': ('Wednesday', 2), 'H3T': ('Wednesday', 2), 'H3V': ('Wednesday', 2), 'H3W': ('Wednesday', 2),
-    'H4A': ('Wednesday', 2), 'H4B': ('Wednesday', 2), 'H4V': ('Wednesday', 2),
-    # Verdun / LaSalle - Thursday
-    'H4G': ('Thursday', 3), 'H4H': ('Thursday', 3), 'H4E': ('Thursday', 3), 'H8N': ('Thursday', 3), 'H8P': ('Thursday', 3),
-    # Mercier-Hochelaga - Tuesday
-    'H1L': ('Tuesday', 1), 'H1M': ('Tuesday', 1), 'H1N': ('Tuesday', 1), 'H1K': ('Tuesday', 1),
-    # Anjou / Saint-Léonard - Friday
-    'H1J': ('Friday', 4), 'H1R': ('Friday', 4), 'H1S': ('Friday', 4), 'H1T': ('Friday', 4),
-    # Montreal-Nord - Monday
-    'H1G': ('Monday', 0), 'H1H': ('Monday', 0),
-    # Rivière-des-Prairies / Pointe-aux-Trembles - Tuesday
-    'H1A': ('Tuesday', 1), 'H1B': ('Tuesday', 1), 'H1C': ('Tuesday', 1), 'H1E': ('Tuesday', 1),
-    # West Island - Various
-    'H9A': ('Wednesday', 2), 'H9B': ('Wednesday', 2), 'H9C': ('Wednesday', 2),
-    'H9H': ('Thursday', 3), 'H9J': ('Thursday', 3), 'H9K': ('Thursday', 3),
-    'H9R': ('Friday', 4), 'H9S': ('Friday', 4), 'H9W': ('Friday', 4), 'H9X': ('Friday', 4),
-    # Lachine - Monday
-    'H8R': ('Monday', 0), 'H8S': ('Monday', 0), 'H8T': ('Monday', 0),
-    # Sud-Ouest - Tuesday
-    'H3J': ('Tuesday', 1), 'H3K': ('Tuesday', 1), 'H4C': ('Tuesday', 1),
-}
-
-
-def _get_montreal_default_schedule(postal_code: str = None) -> Dict[str, Any]:
-    """Get Montreal waste schedule based on FSA (first 3 chars of postal code)."""
-    from datetime import datetime, timedelta
-
-    today = datetime.now()
-
-    # Default to Tuesday if no postal code or FSA not found
-    day_name = 'Tuesday'
-    day_num = 1
-
-    if postal_code:
-        fsa = postal_code.upper().replace(' ', '')[:3]
-        if fsa in MONTREAL_FSA_DAYS:
-            day_name, day_num = MONTREAL_FSA_DAYS[fsa]
-
-    # Calculate next collection dates
-    days_until_collection = (day_num - today.weekday()) % 7
-    if days_until_collection == 0:
-        days_until_collection = 7  # If today is collection day, show next week
-
-    next_garbage = today + timedelta(days=days_until_collection)
-
-    # Recycling is bi-weekly - determine if this week or next
-    week_num = next_garbage.isocalendar()[1]
-    if week_num % 2 == 0:
-        next_recycling = next_garbage
-        recycling_display = f"This {day_name}"
-    else:
-        next_recycling = next_garbage + timedelta(days=7)
-        recycling_display = f"Next {day_name}"
-
-    # Format garbage display
-    if days_until_collection == 1:
-        garbage_display = "Tomorrow"
-    elif days_until_collection <= 7:
-        garbage_display = f"This {day_name}"
-    else:
-        garbage_display = f"Next {day_name}"
-
-    return {
-        'garbage': {
-            'type': 'garbage',
-            'name': 'Garbage',
-            'name_fr': 'Ordures ménagères',
-            'day_of_week': day_name,
-            'frequency': 'weekly',
-            'next_collection': next_garbage.strftime('%Y-%m-%d'),
-            'next_collection_display': garbage_display
-        },
-        'recycling': {
-            'type': 'recycling',
-            'name': 'Recycling',
-            'name_fr': 'Matières recyclables',
-            'day_of_week': day_name,
-            'frequency': 'bi-weekly',
-            'next_collection': next_recycling.strftime('%Y-%m-%d'),
-            'next_collection_display': recycling_display
-        },
-        'organic': {
-            'type': 'organic',
-            'name': 'Organic/Food Waste',
-            'name_fr': 'Résidus alimentaires',
-            'day_of_week': day_name,
-            'frequency': 'weekly',
-            'next_collection': next_garbage.strftime('%Y-%m-%d'),
-            'next_collection_display': garbage_display
-        },
-        'zone_code': postal_code.upper().replace(' ', '')[:3] if postal_code else 'MTL',
-        'zone_description': f"Montreal ({postal_code.upper().replace(' ', '')[:3]} schedule)" if postal_code else "Montreal"
-    }
-
-
-def _get_quebec_waste_schedule(waste_zone_id: int = None, postal_code: str = None,
-                                lat: float = None, lon: float = None) -> Optional[Dict[str, Any]]:
-    """Get waste schedule from Quebec City zone-based system."""
-    try:
-        from app.services.quebec.waste import get_waste_schedule as qc_waste
-
-        # If we have a waste_zone_id, use it directly
-        if waste_zone_id:
-            return qc_waste(waste_zone_id=waste_zone_id)
-
-        # Try to determine zone from postal code FSA
-        if postal_code:
-            zone_code = _get_quebec_zone_from_postal(postal_code)
-            if zone_code:
-                schedule = qc_waste(zone_code=zone_code)
-                if schedule:
-                    return schedule
-
-        # Fallback: return a default schedule based on typical Quebec City patterns
-        return _get_quebec_default_schedule(postal_code)
-
-    except Exception as e:
-        logger.error(f"Quebec waste schedule error: {e}")
-        # Fall back to default schedule on any error
-        return _get_quebec_default_schedule(postal_code)
-
-
-def _get_quebec_zone_from_postal(postal_code: str) -> Optional[str]:
-    """
-    Map Quebec City postal code FSA to waste zone.
-
-    This is a simplified mapping - in production this would use
-    actual Quebec City zone data.
-    """
-    if not postal_code:
-        return None
-
-    normalized = postal_code.upper().replace(' ', '')
-    fsa = normalized[:3] if len(normalized) >= 3 else None
-
-    if not fsa:
-        return None
-
-    # Map FSAs to zones (simplified mapping based on areas)
-    QUEBEC_FSA_ZONES = {
-        # Old Quebec / Downtown
-        'G1K': 'QC-A', 'G1R': 'QC-A',
-        # Saint-Roch / Saint-Sauveur
-        'G1L': 'QC-B', 'G1N': 'QC-B',
-        # Limoilou
-        'G1M': 'QC-C', 'G1P': 'QC-C',
-        # Sainte-Foy / Cap-Rouge
-        'G1V': 'QC-D', 'G1W': 'QC-D', 'G1X': 'QC-D', 'G1Y': 'QC-D',
-        # Charlesbourg / Beauport
-        'G1B': 'QC-E', 'G1C': 'QC-E', 'G1E': 'QC-E', 'G1G': 'QC-E', 'G1H': 'QC-E',
-        # Les Rivières
-        'G2A': 'QC-B', 'G2B': 'QC-B', 'G2C': 'QC-E',
-        # Haute-Saint-Charles
-        'G3A': 'QC-C', 'G3B': 'QC-C', 'G3E': 'QC-D', 'G3G': 'QC-D',
-    }
-
-    return QUEBEC_FSA_ZONES.get(fsa)
-
-
-def _get_quebec_default_schedule(postal_code: str = None) -> Dict[str, Any]:
-    """
-    Return a Quebec City waste schedule based on postal code area.
-
-    Different areas of Quebec City have different collection days.
-    """
-    from datetime import datetime, timedelta
-
-    today = datetime.now()
-    current_week = today.isocalendar()[1]
-    is_odd_week = current_week % 2 == 1
-
-    # Determine collection day based on postal code FSA
-    # Quebec City collection days vary by neighborhood
-    day_name = 'Thursday'  # Default
-    day_num = 3  # Thursday = 3
-
-    if postal_code:
-        fsa = postal_code.upper().replace(' ', '')[:3]
-        # Map FSAs to collection days (based on Quebec City areas)
-        FSA_DAYS = {
-            # Sainte-Foy / Cap-Rouge area - Thursday
-            'G1V': ('Thursday', 3), 'G1W': ('Thursday', 3), 'G1X': ('Thursday', 3), 'G1Y': ('Thursday', 3),
-            # Vieux-Quebec / Downtown - Monday
-            'G1K': ('Monday', 0), 'G1R': ('Monday', 0),
-            # Saint-Roch / Saint-Sauveur - Tuesday
-            'G1L': ('Tuesday', 1), 'G1N': ('Tuesday', 1),
-            # Limoilou - Wednesday
-            'G1M': ('Wednesday', 2), 'G1P': ('Wednesday', 2),
-            # Charlesbourg / Beauport - Friday
-            'G1B': ('Friday', 4), 'G1C': ('Friday', 4), 'G1E': ('Friday', 4),
-            'G1G': ('Friday', 4), 'G1H': ('Friday', 4),
-            # Les Rivières - Tuesday
-            'G2A': ('Tuesday', 1), 'G2B': ('Tuesday', 1), 'G2C': ('Friday', 4),
-            # Haute-Saint-Charles - Wednesday/Thursday
-            'G3A': ('Wednesday', 2), 'G3B': ('Wednesday', 2),
-            'G3E': ('Thursday', 3), 'G3G': ('Thursday', 3),
-        }
-        if fsa in FSA_DAYS:
-            day_name, day_num = FSA_DAYS[fsa]
-
-    # Calculate next collection date
-    days_until_garbage = (day_num - today.weekday()) % 7
-    if days_until_garbage == 0:
-        days_until_garbage = 7
-    next_garbage = today + timedelta(days=days_until_garbage)
-
-    # Recycling on same day but every other week
-    days_until_recycling = days_until_garbage
-    recycling_date = today + timedelta(days=days_until_recycling)
-    recycling_week_parity = recycling_date.isocalendar()[1] % 2 == 1
-
-    # If this week isn't a recycling week, add a week
-    if recycling_week_parity != is_odd_week:
-        days_until_recycling += 7
-
-    next_recycling = today + timedelta(days=days_until_recycling)
-
-    def format_date(d: datetime) -> str:
-        days = (d.date() - today.date()).days
-        if days == 0:
-            return 'Today'
-        elif days == 1:
-            return 'Tomorrow'
-        elif days < 7:
-            return f"This {d.strftime('%A')}"
-        else:
-            return f"Next {d.strftime('%A')}"
-
-    return {
-        'zone_code': postal_code[:3] if postal_code else 'Default',
-        'zone_description': f'Quebec City ({postal_code[:3] if postal_code else "estimated"} schedule)',
-        'garbage': {
-            'name': 'Garbage',
-            'day_of_week': day_name,
-            'next_collection': next_garbage.date().isoformat(),
-            'next_collection_display': format_date(next_garbage),
-            'is_tomorrow': days_until_garbage == 1
-        },
-        'recycling': {
-            'name': 'Recycling',
-            'day_of_week': day_name,
-            'week_type': 'Odd' if is_odd_week else 'Even',
-            'next_collection': next_recycling.date().isoformat(),
-            'next_collection_display': format_date(next_recycling),
-            'is_tomorrow': days_until_recycling == 1
-        }
-    }
 
 
 def geocode_postal_code(postal_code: str) -> Optional[Dict[str, Any]]:
