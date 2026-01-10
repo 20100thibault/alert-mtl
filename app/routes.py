@@ -49,13 +49,14 @@ def unsubscribe(token):
     subscriber = Subscriber.query.filter_by(unsubscribe_token=token).first()
 
     if not subscriber:
-        return render_template('unsubscribe.html', success=False, error='Invalid token')
+        return render_template('unsubscribe.html', success=False, error='Invalid token', language='en')
 
+    language = getattr(subscriber, 'language', 'en') or 'en'
     subscriber.is_active = False
     db.session.commit()
 
     logger.info(f"Subscriber {subscriber.email} unsubscribed")
-    return render_template('unsubscribe.html', success=True, email=subscriber.email)
+    return render_template('unsubscribe.html', success=True, email=subscriber.email, language=language)
 
 
 @main_bp.route('/health')
@@ -362,6 +363,9 @@ def subscribe():
     city = data.get('city')  # Optional, will be auto-detected
     snow_alerts = data.get('snow_alerts', True)
     waste_alerts = data.get('waste_alerts', False)
+    language = data.get('language', 'en')  # 'en' or 'fr'
+    if language not in ('en', 'fr'):
+        language = 'en'
 
     # Validate email
     if not email or not validate_email(email):
@@ -387,11 +391,13 @@ def subscribe():
             if not subscriber.is_active:
                 subscriber.is_active = True
                 logger.info(f"Reactivated subscriber: {email}")
+            # Update language preference
+            subscriber.language = language
         else:
-            subscriber = Subscriber(email=email)
+            subscriber = Subscriber(email=email, language=language)
             db.session.add(subscriber)
             db.session.flush()
-            logger.info(f"New subscriber: {email}")
+            logger.info(f"New subscriber: {email} (lang={language})")
 
         # Check address limit (max 5 per subscriber)
         if subscriber.addresses.count() >= 5:

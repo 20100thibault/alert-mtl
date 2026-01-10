@@ -41,6 +41,7 @@ class Subscriber(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
     unsubscribe_token = db.Column(db.String(36), unique=True, default=generate_token)
+    language = db.Column(db.String(2), default='en')  # 'en' or 'fr'
 
     # Relationships
     addresses = db.relationship('Address', backref='subscriber', lazy='dynamic',
@@ -55,6 +56,7 @@ class Subscriber(db.Model):
             'email': self.email,
             'created_at': self.created_at.isoformat(),
             'is_active': self.is_active,
+            'language': self.language,
             'address_count': self.addresses.count()
         }
 

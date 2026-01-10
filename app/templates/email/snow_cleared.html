@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ language|default('en') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: #22C55E; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0; font-size: 24px;">Street Cleared!</h1>
-        <p style="margin: 5px 0 0 0; opacity: 0.9;">Alert MTL</p>
+        <h1 style="margin: 0; font-size: 24px;">{% if language == 'fr' %}Rue déneigée!{% else %}Street Cleared!{% endif %}</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">{% if language == 'fr' %}Alerte Québec{% else %}Alert Quebec{% endif %}</p>
     </div>
 
     <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
         <div style="background: #F0FDF4; border: 2px solid #22C55E; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h2 style="color: #16A34A; margin: 0 0 10px 0;">Snow Removal Complete</h2>
-            <p style="margin: 0;">Your street has been cleared. Parking is now allowed.</p>
+            <h2 style="color: #16A34A; margin: 0 0 10px 0;">{% if language == 'fr' %}Déneigement terminé{% else %}Snow Removal Complete{% endif %}</h2>
+            <p style="margin: 0;">{% if language == 'fr' %}Votre rue a été déneigée. Le stationnement est maintenant permis.{% else %}Your street has been cleared. Parking is now allowed.{% endif %}</p>
         </div>
 
         <div style="background: #F3F4F6; padding: 15px; border-radius: 6px; margin: 20px 0;">
@@ -21,13 +21,17 @@
         </div>
 
         <p style="color: #6B7280; font-size: 14px;">
+            {% if language == 'fr' %}
+            Note: Vérifiez toujours la signalisation affichée car elle a préséance sur cette notification.
+            {% else %}
             Note: Always check posted signage as it takes precedence over this notification.
+            {% endif %}
         </p>
 
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
         <p style="font-size: 12px; color: #6B7280;">
-            <a href="{{ unsubscribe_url }}" style="color: #2563EB;">Unsubscribe</a> from Alert MTL
+            <a href="{{ unsubscribe_url }}" style="color: #2563EB;">{% if language == 'fr' %}Se désabonner{% else %}Unsubscribe{% endif %}</a> {% if language == 'fr' %}d'Alerte Québec{% else %}from Alert Quebec{% endif %}
         </p>
     </div>
 </body>

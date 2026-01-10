@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ language|default('en') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: #5856d6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0; font-size: 24px;">Snow Removal Alert</h1>
-        <p style="margin: 5px 0 0 0; opacity: 0.9;">Alert Quebec - Quebec City</p>
+        <h1 style="margin: 0; font-size: 24px;">{% if language == 'fr' %}Alerte Déneigement{% else %}Snow Removal Alert{% endif %}</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">{% if language == 'fr' %}Alerte Québec - Ville de Québec{% else %}Alert Quebec - Quebec City{% endif %}</p>
     </div>
 
     <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
         <div style="background: #F3F0FF; border: 2px solid #5856d6; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h2 style="color: #5856d6; margin: 0 0 10px 0;">Flashing Lights Detected!</h2>
-            <p style="margin: 0; font-size: 18px;">Snow removal operations are active near your location.</p>
+            <h2 style="color: #5856d6; margin: 0 0 10px 0;">{% if language == 'fr' %}Gyrophares détectés!{% else %}Flashing Lights Detected!{% endif %}</h2>
+            <p style="margin: 0; font-size: 18px;">{% if language == 'fr' %}Des opérations de déneigement sont en cours près de chez vous.{% else %}Snow removal operations are active near your location.{% endif %}</p>
         </div>
 
         <div style="background: #F3F4F6; padding: 15px; border-radius: 6px; margin: 20px 0;">
@@ -22,30 +22,39 @@
 
         <div style="background: #5856d6; color: white; padding: 15px; border-radius: 8px; margin: 20px 0;">
             <p style="margin: 0; font-size: 16px;">
+                {% if language == 'fr' %}
+                <strong>{{ lights_nearby }}</strong> gyrophare(s) détecté(s) à proximité
+                {% else %}
                 <strong>{{ lights_nearby }}</strong> flashing light(s) detected nearby
+                {% endif %}
             </p>
             {% if nearest_street and nearest_street != 'Unknown' %}
             <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">
-                Nearest: {{ nearest_street }} ({{ nearest_distance }}m away)
+                {% if language == 'fr' %}Le plus proche: {{ nearest_street }} ({{ nearest_distance }}m){% else %}Nearest: {{ nearest_street }} ({{ nearest_distance }}m away){% endif %}
             </p>
             {% endif %}
         </div>
 
         <div style="background: #FEF2F2; border-left: 4px solid #EF4444; padding: 15px; margin: 20px 0;">
             <p style="margin: 0; color: #DC2626; font-weight: bold;">
-                Move your vehicle if it's parked on a street being cleared!
+                {% if language == 'fr' %}Déplacez votre véhicule s'il est stationné sur une rue en cours de déneigement!{% else %}Move your vehicle if it's parked on a street being cleared!{% endif %}
             </p>
         </div>
 
         <p style="color: #6B7280; font-size: 14px;">
+            {% if language == 'fr' %}
+            Les opérations de déneigement à Québec sont indiquées par des gyrophares sur les déneigeuses.
+            Si vous voyez des lumières dans votre secteur, le stationnement peut être interdit sur ce segment de rue.
+            {% else %}
             Snow removal operations in Quebec City are indicated by flashing lights on snow plows.
             If you see lights in your area, parking may be prohibited on that street segment.
+            {% endif %}
         </p>
 
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
         <p style="font-size: 12px; color: #6B7280;">
-            <a href="{{ unsubscribe_url }}" style="color: #5856d6;">Unsubscribe</a> from Alert Quebec
+            <a href="{{ unsubscribe_url }}" style="color: #5856d6;">{% if language == 'fr' %}Se désabonner{% else %}Unsubscribe{% endif %}</a> {% if language == 'fr' %}d'Alerte Québec{% else %}from Alert Quebec{% endif %}
         </p>
     </div>
 </body>

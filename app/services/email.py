@@ -106,18 +106,25 @@ def send_confirmation_email(subscriber, address) -> Dict[str, Any]:
 
     city = getattr(address, 'city', 'montreal') or 'montreal'
     city_display = 'Montreal' if city == 'montreal' else 'Quebec City'
+    language = getattr(subscriber, 'language', 'en') or 'en'
 
     html_content = render_template(
         'email/confirmation.html',
         address=address.full_address(),
         city=city,
         city_display=city_display,
-        unsubscribe_url=unsubscribe_url
+        unsubscribe_url=unsubscribe_url,
+        language=language
     )
+
+    if language == 'fr':
+        subject = f"Bienvenue à Alerte Québec - Abonnement confirmé"
+    else:
+        subject = f"Welcome to Alert Quebec - {city_display} Subscription Confirmed"
 
     return send_email(
         to=subscriber.email,
-        subject=f"Welcome to Alert Quebec - {city_display} Subscription Confirmed",
+        subject=subject,
         html_content=html_content,
         city=city
     )
@@ -127,6 +134,7 @@ def send_snow_scheduled_alert(subscriber, address, status_data: Dict) -> Dict[st
     """Send alert when snow removal is scheduled (Montreal)."""
     app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     unsubscribe_url = f"{app_url}/unsubscribe/{subscriber.unsubscribe_token}"
+    language = getattr(subscriber, 'language', 'en') or 'en'
 
     html_content = render_template(
         'email/snow_scheduled.html',
@@ -134,12 +142,18 @@ def send_snow_scheduled_alert(subscriber, address, status_data: Dict) -> Dict[st
         city='montreal',
         city_display='Montreal',
         status=status_data,
-        unsubscribe_url=unsubscribe_url
+        unsubscribe_url=unsubscribe_url,
+        language=language
     )
+
+    if language == 'fr':
+        subject = f"Déneigement prévu - {address.full_address()}"
+    else:
+        subject = f"Snow Removal Scheduled - {address.full_address()}"
 
     return send_email(
         to=subscriber.email,
-        subject=f"Snow Removal Scheduled - {address.full_address()}",
+        subject=subject,
         html_content=html_content,
         city='montreal'
     )
@@ -149,6 +163,7 @@ def send_snow_urgent_alert(subscriber, address, status_data: Dict) -> Dict[str, 
     """Send urgent alert when snow removal is in progress (Montreal)."""
     app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     unsubscribe_url = f"{app_url}/unsubscribe/{subscriber.unsubscribe_token}"
+    language = getattr(subscriber, 'language', 'en') or 'en'
 
     html_content = render_template(
         'email/snow_urgent.html',
@@ -156,12 +171,18 @@ def send_snow_urgent_alert(subscriber, address, status_data: Dict) -> Dict[str, 
         city='montreal',
         city_display='Montreal',
         status=status_data,
-        unsubscribe_url=unsubscribe_url
+        unsubscribe_url=unsubscribe_url,
+        language=language
     )
+
+    if language == 'fr':
+        subject = f"URGENT: Déneigement en cours - {address.full_address()}"
+    else:
+        subject = f"URGENT: Snow Removal In Progress - {address.full_address()}"
 
     return send_email(
         to=subscriber.email,
-        subject=f"URGENT: Snow Removal In Progress - {address.full_address()}",
+        subject=subject,
         html_content=html_content,
         city='montreal'
     )
@@ -171,18 +192,25 @@ def send_snow_cleared_alert(subscriber, address) -> Dict[str, Any]:
     """Send confirmation when street is cleared (Montreal)."""
     app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     unsubscribe_url = f"{app_url}/unsubscribe/{subscriber.unsubscribe_token}"
+    language = getattr(subscriber, 'language', 'en') or 'en'
 
     html_content = render_template(
         'email/snow_cleared.html',
         address=address.full_address(),
         city='montreal',
         city_display='Montreal',
-        unsubscribe_url=unsubscribe_url
+        unsubscribe_url=unsubscribe_url,
+        language=language
     )
+
+    if language == 'fr':
+        subject = f"Rue déneigée - {address.full_address()}"
+    else:
+        subject = f"Street Cleared - {address.full_address()}"
 
     return send_email(
         to=subscriber.email,
-        subject=f"Street Cleared - {address.full_address()}",
+        subject=subject,
         html_content=html_content,
         city='montreal'
     )
@@ -192,6 +220,7 @@ def send_snow_alert_quebec(subscriber, address, status_data: Dict) -> Dict[str, 
     """Send snow removal alert for Quebec City (flashing lights detected)."""
     app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     unsubscribe_url = f"{app_url}/unsubscribe/{subscriber.unsubscribe_token}"
+    language = getattr(subscriber, 'language', 'en') or 'en'
 
     lights_nearby = status_data.get('lights_nearby', 0)
     lights = status_data.get('lights', [])
@@ -207,12 +236,18 @@ def send_snow_alert_quebec(subscriber, address, status_data: Dict) -> Dict[str, 
         nearest_street=nearest_light.get('street', 'Unknown'),
         nearest_distance=int(nearest_light.get('distance', 0)),
         status=status_data,
-        unsubscribe_url=unsubscribe_url
+        unsubscribe_url=unsubscribe_url,
+        language=language
     )
+
+    if language == 'fr':
+        subject = f"Alerte Déneigement - {address.postal_code}"
+    else:
+        subject = f"Snow Removal Alert - {address.postal_code}"
 
     return send_email(
         to=subscriber.email,
-        subject=f"Snow Removal Alert - {address.postal_code}",
+        subject=subject,
         html_content=html_content,
         city='quebec'
     )
@@ -222,8 +257,10 @@ def send_waste_reminder(subscriber, address, collections: List[Dict]) -> Dict[st
     """Send waste collection reminder (Montreal)."""
     app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     unsubscribe_url = f"{app_url}/unsubscribe/{subscriber.unsubscribe_token}"
+    language = getattr(subscriber, 'language', 'en') or 'en'
 
     collection_names = ', '.join([c['name'] for c in collections])
+    collection_names_fr = ', '.join([c.get('name_fr', c['name']) for c in collections])
 
     html_content = render_template(
         'email/waste_reminder.html',
@@ -231,12 +268,18 @@ def send_waste_reminder(subscriber, address, collections: List[Dict]) -> Dict[st
         city='montreal',
         city_display='Montreal',
         collections=collections,
-        unsubscribe_url=unsubscribe_url
+        unsubscribe_url=unsubscribe_url,
+        language=language
     )
+
+    if language == 'fr':
+        subject = f"Demain: Collecte {collection_names_fr} - {address.full_address()}"
+    else:
+        subject = f"Tomorrow: {collection_names} Collection - {address.full_address()}"
 
     return send_email(
         to=subscriber.email,
-        subject=f"Tomorrow: {collection_names} Collection - {address.full_address()}",
+        subject=subject,
         html_content=html_content,
         city='montreal'
     )
@@ -246,14 +289,19 @@ def send_waste_reminder_quebec(subscriber, address, collection_types: List[str],
     """Send waste collection reminder for Quebec City."""
     app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     unsubscribe_url = f"{app_url}/unsubscribe/{subscriber.unsubscribe_token}"
+    language = getattr(subscriber, 'language', 'en') or 'en'
 
     collection_names = []
+    collection_names_fr = []
     if 'garbage' in collection_types:
         collection_names.append('Garbage')
+        collection_names_fr.append('Ordures')
     if 'recycling' in collection_types:
         collection_names.append('Recycling')
+        collection_names_fr.append('Recyclage')
 
     collection_display = ' & '.join(collection_names)
+    collection_display_fr = ' & '.join(collection_names_fr)
 
     html_content = render_template(
         'email/waste_reminder_quebec.html',
@@ -263,13 +311,20 @@ def send_waste_reminder_quebec(subscriber, address, collection_types: List[str],
         city_display='Quebec City',
         collection_types=collection_types,
         collection_display=collection_display,
+        collection_display_fr=collection_display_fr,
         schedule=schedule,
-        unsubscribe_url=unsubscribe_url
+        unsubscribe_url=unsubscribe_url,
+        language=language
     )
+
+    if language == 'fr':
+        subject = f"Demain: Collecte {collection_display_fr} - {address.postal_code}"
+    else:
+        subject = f"Tomorrow: {collection_display} Collection - {address.postal_code}"
 
     return send_email(
         to=subscriber.email,
-        subject=f"Tomorrow: {collection_display} Collection - {address.postal_code}",
+        subject=subject,
         html_content=html_content,
         city='quebec'
     )
