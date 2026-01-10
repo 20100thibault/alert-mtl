@@ -136,7 +136,7 @@ def get_waste_schedule():
 
         schedule = service_get_waste_schedule(
             city=city,
-            postal_code=postal_code if postal_code else None,
+            postal_code=postal_code or None,
             lat=lat,
             lon=lon
         )
