@@ -122,23 +122,23 @@ def get_snow_status():
 @api_bp.route('/waste-schedule')
 @limiter.limit("30 per minute")
 def get_waste_schedule():
-    """Get waste collection schedule for coordinates."""
+    """Get waste collection schedule for a location."""
+    postal_code = request.args.get('postal_code', '').strip()
     lat = request.args.get('lat', type=float)
     lon = request.args.get('lon', type=float)
     city = request.args.get('city')
-    waste_zone_id = request.args.get('waste_zone_id', type=int)
 
-    if not (lat and lon) and not waste_zone_id:
-        return jsonify({'error': 'Please provide lat/lon coordinates or waste_zone_id'}), 400
+    if not postal_code and not (lat and lon):
+        return jsonify({'error': 'Please provide postal_code or lat/lon coordinates'}), 400
 
     try:
         from app.services import get_waste_schedule as service_get_waste_schedule
 
         schedule = service_get_waste_schedule(
             city=city,
+            postal_code=postal_code if postal_code else None,
             lat=lat,
-            lon=lon,
-            waste_zone_id=waste_zone_id
+            lon=lon
         )
 
         if not schedule:
