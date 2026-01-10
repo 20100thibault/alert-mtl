@@ -628,6 +628,486 @@
           ]
         }
       ]
+    },
+    {
+      "id": "phase-10",
+      "name": "Internationalization (i18n) - French Language Support",
+      "tasks": [
+        {
+          "id": "task-10.1",
+          "name": "Create language toggle UI component",
+          "microtasks": [
+            {
+              "id": "mt-10.1.1",
+              "name": "Add language toggle in top-right corner (EN/FR pill buttons)",
+              "tests": [{ "type": "e2e", "description": "Verify language toggle is visible in header", "file": "tests/test_i18n.py::test_language_toggle_visible" }]
+            },
+            {
+              "id": "mt-10.1.2",
+              "name": "Style toggle with active/inactive states matching design system",
+              "tests": [{ "type": "e2e", "description": "Verify active language has filled background", "file": "tests/test_i18n.py::test_toggle_active_style" }]
+            },
+            {
+              "id": "mt-10.1.3",
+              "name": "Add hover effects and smooth transitions (0.2s ease)",
+              "tests": [{ "type": "e2e", "description": "Verify hover state changes", "file": "tests/test_i18n.py::test_toggle_hover" }]
+            },
+            {
+              "id": "mt-10.1.4",
+              "name": "Make toggle responsive (mobile-friendly placement)",
+              "tests": [{ "type": "e2e", "description": "Verify toggle works on mobile viewport", "file": "tests/test_i18n.py::test_toggle_responsive" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.2",
+          "name": "Implement browser language auto-detection",
+          "microtasks": [
+            {
+              "id": "mt-10.2.1",
+              "name": "Create detectBrowserLanguage() function using navigator.language",
+              "tests": [{ "type": "unit", "description": "Test detection returns 'fr' for fr-CA, fr-FR", "file": "tests/test_i18n.py::test_detect_french" }]
+            },
+            {
+              "id": "mt-10.2.2",
+              "name": "Handle language variants (fr-CA, fr-FR → fr; en-US, en-GB → en)",
+              "tests": [{ "type": "unit", "description": "Test variant normalization", "file": "tests/test_i18n.py::test_language_variants" }]
+            },
+            {
+              "id": "mt-10.2.3",
+              "name": "Default to English for unsupported languages",
+              "tests": [{ "type": "unit", "description": "Test fallback to English", "file": "tests/test_i18n.py::test_unsupported_fallback" }]
+            },
+            {
+              "id": "mt-10.2.4",
+              "name": "Apply detected language on page load (before first render)",
+              "tests": [{ "type": "e2e", "description": "Verify no English flash for French browsers", "file": "tests/test_i18n.py::test_no_lang_flash" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.3",
+          "name": "Create translations configuration object",
+          "microtasks": [
+            {
+              "id": "mt-10.3.1",
+              "name": "Create translations object with 'en' and 'fr' keys",
+              "tests": [{ "type": "unit", "description": "Verify translations object structure", "file": "tests/test_i18n.py::test_translations_structure" }]
+            },
+            {
+              "id": "mt-10.3.2",
+              "name": "Add all hero section translations (title, description)",
+              "tests": [{ "type": "unit", "description": "Verify hero translations exist", "file": "tests/test_i18n.py::test_hero_translations" }]
+            },
+            {
+              "id": "mt-10.3.3",
+              "name": "Add all quick check section translations",
+              "tests": [{ "type": "unit", "description": "Verify quick check translations", "file": "tests/test_i18n.py::test_quick_check_translations" }]
+            },
+            {
+              "id": "mt-10.3.4",
+              "name": "Add all subscribe form translations (labels, buttons)",
+              "tests": [{ "type": "unit", "description": "Verify form translations", "file": "tests/test_i18n.py::test_form_translations" }]
+            },
+            {
+              "id": "mt-10.3.5",
+              "name": "Add all alert type translations (snow, waste descriptions)",
+              "tests": [{ "type": "unit", "description": "Verify alert type translations", "file": "tests/test_i18n.py::test_alert_translations" }]
+            },
+            {
+              "id": "mt-10.3.6",
+              "name": "Add 'How it works' section translations",
+              "tests": [{ "type": "unit", "description": "Verify info section translations", "file": "tests/test_i18n.py::test_info_translations" }]
+            },
+            {
+              "id": "mt-10.3.7",
+              "name": "Add results section translations (status labels, CTA)",
+              "tests": [{ "type": "unit", "description": "Verify results translations", "file": "tests/test_i18n.py::test_results_translations" }]
+            },
+            {
+              "id": "mt-10.3.8",
+              "name": "Add all error and success message translations",
+              "tests": [{ "type": "unit", "description": "Verify message translations", "file": "tests/test_i18n.py::test_message_translations" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.4",
+          "name": "Implement language state management",
+          "microtasks": [
+            {
+              "id": "mt-10.4.1",
+              "name": "Create currentLanguage variable with localStorage persistence",
+              "tests": [{ "type": "e2e", "description": "Verify language saves to localStorage", "file": "tests/test_i18n.py::test_language_persistence" }]
+            },
+            {
+              "id": "mt-10.4.2",
+              "name": "Create setLanguage(lang) function to update state and UI",
+              "tests": [{ "type": "unit", "description": "Verify setLanguage updates state", "file": "tests/test_i18n.py::test_set_language" }]
+            },
+            {
+              "id": "mt-10.4.3",
+              "name": "Create t(key) helper function to get translation",
+              "tests": [{ "type": "unit", "description": "Verify t() returns correct translation", "file": "tests/test_i18n.py::test_t_function" }]
+            },
+            {
+              "id": "mt-10.4.4",
+              "name": "User selection overrides browser auto-detection",
+              "tests": [{ "type": "e2e", "description": "Verify manual selection persists", "file": "tests/test_i18n.py::test_manual_override" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.5",
+          "name": "Implement applyLanguage() function",
+          "microtasks": [
+            {
+              "id": "mt-10.5.1",
+              "name": "Update HTML lang attribute (document.documentElement.lang)",
+              "tests": [{ "type": "e2e", "description": "Verify HTML lang changes", "file": "tests/test_i18n.py::test_html_lang_attr" }]
+            },
+            {
+              "id": "mt-10.5.2",
+              "name": "Update all static text elements with translations",
+              "tests": [{ "type": "e2e", "description": "Verify all text updates on toggle", "file": "tests/test_i18n.py::test_all_text_updates" }]
+            },
+            {
+              "id": "mt-10.5.3",
+              "name": "Update placeholder texts for inputs",
+              "tests": [{ "type": "e2e", "description": "Verify placeholder translations", "file": "tests/test_i18n.py::test_placeholder_i18n" }]
+            },
+            {
+              "id": "mt-10.5.4",
+              "name": "Update ARIA labels for accessibility",
+              "tests": [{ "type": "e2e", "description": "Verify ARIA labels translated", "file": "tests/test_i18n.py::test_aria_i18n" }]
+            },
+            {
+              "id": "mt-10.5.5",
+              "name": "Update page title (document.title)",
+              "tests": [{ "type": "e2e", "description": "Verify page title changes", "file": "tests/test_i18n.py::test_page_title_i18n" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.6",
+          "name": "Translate dynamic JavaScript messages",
+          "microtasks": [
+            {
+              "id": "mt-10.6.1",
+              "name": "Update geolocation messages (Getting location, errors)",
+              "tests": [{ "type": "e2e", "description": "Verify geo messages translated", "file": "tests/test_i18n.py::test_geo_messages_i18n" }]
+            },
+            {
+              "id": "mt-10.6.2",
+              "name": "Update form validation messages",
+              "tests": [{ "type": "e2e", "description": "Verify validation messages translated", "file": "tests/test_i18n.py::test_validation_i18n" }]
+            },
+            {
+              "id": "mt-10.6.3",
+              "name": "Update success/error toast messages",
+              "tests": [{ "type": "e2e", "description": "Verify toast messages translated", "file": "tests/test_i18n.py::test_toast_i18n" }]
+            },
+            {
+              "id": "mt-10.6.4",
+              "name": "Update loading state messages",
+              "tests": [{ "type": "e2e", "description": "Verify loading text translated", "file": "tests/test_i18n.py::test_loading_i18n" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.7",
+          "name": "Add language to subscriber model",
+          "microtasks": [
+            {
+              "id": "mt-10.7.1",
+              "name": "Add language column to Subscriber model (default 'en')",
+              "tests": [{ "type": "unit", "description": "Verify language field exists", "file": "tests/test_models.py::test_subscriber_language_field" }]
+            },
+            {
+              "id": "mt-10.7.2",
+              "name": "Create database migration for language column",
+              "tests": [{ "type": "integration", "description": "Verify migration applies", "file": "tests/test_migrations.py::test_language_migration" }]
+            },
+            {
+              "id": "mt-10.7.3",
+              "name": "Pass language in subscribe API request",
+              "tests": [{ "type": "integration", "description": "Verify API accepts language", "file": "tests/test_routes.py::test_subscribe_language" }]
+            },
+            {
+              "id": "mt-10.7.4",
+              "name": "Store subscriber language preference in database",
+              "tests": [{ "type": "integration", "description": "Verify language stored", "file": "tests/test_routes.py::test_language_stored" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.8",
+          "name": "Create French email templates",
+          "microtasks": [
+            {
+              "id": "mt-10.8.1",
+              "name": "Create confirmation_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French confirmation template renders", "file": "tests/test_email.py::test_confirmation_fr" }]
+            },
+            {
+              "id": "mt-10.8.2",
+              "name": "Create snow_urgent_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French urgent template renders", "file": "tests/test_email.py::test_snow_urgent_fr" }]
+            },
+            {
+              "id": "mt-10.8.3",
+              "name": "Create snow_scheduled_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French scheduled template renders", "file": "tests/test_email.py::test_snow_scheduled_fr" }]
+            },
+            {
+              "id": "mt-10.8.4",
+              "name": "Create snow_cleared_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French cleared template renders", "file": "tests/test_email.py::test_snow_cleared_fr" }]
+            },
+            {
+              "id": "mt-10.8.5",
+              "name": "Create waste_reminder_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French waste template renders", "file": "tests/test_email.py::test_waste_reminder_fr" }]
+            },
+            {
+              "id": "mt-10.8.6",
+              "name": "Create snow_quebec_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French Quebec snow template renders", "file": "tests/test_email.py::test_snow_quebec_fr" }]
+            },
+            {
+              "id": "mt-10.8.7",
+              "name": "Create waste_reminder_quebec_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French Quebec waste template renders", "file": "tests/test_email.py::test_waste_quebec_fr" }]
+            },
+            {
+              "id": "mt-10.8.8",
+              "name": "Create unsubscribe_fr.html template",
+              "tests": [{ "type": "unit", "description": "Verify French unsubscribe template renders", "file": "tests/test_email.py::test_unsubscribe_fr" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.9",
+          "name": "Update email service to use subscriber language",
+          "microtasks": [
+            {
+              "id": "mt-10.9.1",
+              "name": "Add language parameter to send_email function",
+              "tests": [{ "type": "unit", "description": "Verify send_email accepts language", "file": "tests/test_email.py::test_send_email_language" }]
+            },
+            {
+              "id": "mt-10.9.2",
+              "name": "Select template based on language (template_name_fr.html)",
+              "tests": [{ "type": "unit", "description": "Verify correct template selected", "file": "tests/test_email.py::test_template_selection" }]
+            },
+            {
+              "id": "mt-10.9.3",
+              "name": "Translate email subjects based on language",
+              "tests": [{ "type": "unit", "description": "Verify French email subjects", "file": "tests/test_email.py::test_email_subjects_fr" }]
+            },
+            {
+              "id": "mt-10.9.4",
+              "name": "Update all alert sending functions to pass language",
+              "tests": [{ "type": "unit", "description": "Verify language passed through", "file": "tests/test_email.py::test_alerts_use_language" }]
+            }
+          ]
+        },
+        {
+          "id": "task-10.10",
+          "name": "Translate unsubscribe page",
+          "microtasks": [
+            {
+              "id": "mt-10.10.1",
+              "name": "Add language detection on unsubscribe page",
+              "tests": [{ "type": "e2e", "description": "Verify unsubscribe detects language", "file": "tests/test_i18n.py::test_unsubscribe_lang_detect" }]
+            },
+            {
+              "id": "mt-10.10.2",
+              "name": "Translate success and error messages",
+              "tests": [{ "type": "e2e", "description": "Verify unsubscribe messages translated", "file": "tests/test_i18n.py::test_unsubscribe_messages_fr" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-11",
+      "name": "City Auto-Detection from Browser Geolocation",
+      "tasks": [
+        {
+          "id": "task-11.1",
+          "name": "Implement city detection from coordinates",
+          "microtasks": [
+            {
+              "id": "mt-11.1.1",
+              "name": "Create detectCityFromCoordinates(lat, lon) function",
+              "tests": [{ "type": "unit", "description": "Verify function returns correct city", "file": "tests/test_geolocation.py::test_detect_city_coords" }]
+            },
+            {
+              "id": "mt-11.1.2",
+              "name": "Define Montreal bounding box (45.3-45.8 lat, -74.0 to -73.3 lon)",
+              "tests": [{ "type": "unit", "description": "Verify Montreal coords detected", "file": "tests/test_geolocation.py::test_montreal_bounds" }]
+            },
+            {
+              "id": "mt-11.1.3",
+              "name": "Define Quebec City bounding box (46.5-47.5 lat, -71.5 to -71.0 lon)",
+              "tests": [{ "type": "unit", "description": "Verify Quebec coords detected", "file": "tests/test_geolocation.py::test_quebec_bounds" }]
+            },
+            {
+              "id": "mt-11.1.4",
+              "name": "Return null for coordinates outside both cities",
+              "tests": [{ "type": "unit", "description": "Verify null for outside coords", "file": "tests/test_geolocation.py::test_outside_bounds" }]
+            }
+          ]
+        },
+        {
+          "id": "task-11.2",
+          "name": "Integrate city detection with Use My Location button",
+          "microtasks": [
+            {
+              "id": "mt-11.2.1",
+              "name": "Call detectCityFromCoordinates when geolocation succeeds",
+              "tests": [{ "type": "e2e", "description": "Verify city detected on geolocation", "file": "tests/test_geolocation.py::test_geo_city_detect" }]
+            },
+            {
+              "id": "mt-11.2.2",
+              "name": "Auto-switch city toggle if detected city differs",
+              "tests": [{ "type": "e2e", "description": "Verify toggle switches automatically", "file": "tests/test_geolocation.py::test_auto_switch_city" }]
+            },
+            {
+              "id": "mt-11.2.3",
+              "name": "Update localStorage with detected city",
+              "tests": [{ "type": "e2e", "description": "Verify city saved after detection", "file": "tests/test_geolocation.py::test_city_saved" }]
+            },
+            {
+              "id": "mt-11.2.4",
+              "name": "Apply city theme colors after detection",
+              "tests": [{ "type": "e2e", "description": "Verify theme changes on detection", "file": "tests/test_geolocation.py::test_theme_applied" }]
+            }
+          ]
+        },
+        {
+          "id": "task-11.3",
+          "name": "Handle edge cases and errors",
+          "microtasks": [
+            {
+              "id": "mt-11.3.1",
+              "name": "Show 'Outside service area' message for unsupported locations",
+              "tests": [{ "type": "e2e", "description": "Verify outside area message shown", "file": "tests/test_geolocation.py::test_outside_message" }]
+            },
+            {
+              "id": "mt-11.3.2",
+              "name": "Fall back to Montreal if detection fails",
+              "tests": [{ "type": "e2e", "description": "Verify Montreal default on failure", "file": "tests/test_geolocation.py::test_fallback_montreal" }]
+            },
+            {
+              "id": "mt-11.3.3",
+              "name": "Don't override city if user has manually selected",
+              "tests": [{ "type": "e2e", "description": "Verify manual selection preserved", "file": "tests/test_geolocation.py::test_manual_preserved" }]
+            },
+            {
+              "id": "mt-11.3.4",
+              "name": "Handle geolocation timeout gracefully",
+              "tests": [{ "type": "e2e", "description": "Verify timeout handling", "file": "tests/test_geolocation.py::test_geo_timeout" }]
+            }
+          ]
+        },
+        {
+          "id": "task-11.4",
+          "name": "Add visual feedback for city detection",
+          "microtasks": [
+            {
+              "id": "mt-11.4.1",
+              "name": "Show 'Detecting city...' during geolocation",
+              "tests": [{ "type": "e2e", "description": "Verify detecting message shown", "file": "tests/test_geolocation.py::test_detecting_message" }]
+            },
+            {
+              "id": "mt-11.4.2",
+              "name": "Briefly highlight city toggle when auto-switched",
+              "tests": [{ "type": "e2e", "description": "Verify toggle highlight animation", "file": "tests/test_geolocation.py::test_toggle_highlight" }]
+            },
+            {
+              "id": "mt-11.4.3",
+              "name": "Show success message confirming detected city",
+              "tests": [{ "type": "e2e", "description": "Verify city confirmation message", "file": "tests/test_geolocation.py::test_city_confirmed" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-12",
+      "name": "i18n Testing & Polish",
+      "tasks": [
+        {
+          "id": "task-12.1",
+          "name": "Complete translation review",
+          "microtasks": [
+            {
+              "id": "mt-12.1.1",
+              "name": "Review all French translations with native speaker",
+              "tests": [{ "type": "manual", "description": "Native speaker sign-off on translations" }]
+            },
+            {
+              "id": "mt-12.1.2",
+              "name": "Verify all 96 strings are translated",
+              "tests": [{ "type": "unit", "description": "Count translation keys match", "file": "tests/test_i18n.py::test_translation_completeness" }]
+            },
+            {
+              "id": "mt-12.1.3",
+              "name": "Check for text overflow in French (longer strings)",
+              "tests": [{ "type": "e2e", "description": "Verify no text overflow in FR", "file": "tests/test_i18n.py::test_no_overflow_fr" }]
+            }
+          ]
+        },
+        {
+          "id": "task-12.2",
+          "name": "End-to-end i18n testing",
+          "microtasks": [
+            {
+              "id": "mt-12.2.1",
+              "name": "Test full flow in English (check → subscribe → email)",
+              "tests": [{ "type": "e2e", "description": "Full English flow works", "file": "tests/test_i18n.py::test_full_flow_en" }]
+            },
+            {
+              "id": "mt-12.2.2",
+              "name": "Test full flow in French (vérification → abonnement → courriel)",
+              "tests": [{ "type": "e2e", "description": "Full French flow works", "file": "tests/test_i18n.py::test_full_flow_fr" }]
+            },
+            {
+              "id": "mt-12.2.3",
+              "name": "Test language switch mid-session",
+              "tests": [{ "type": "e2e", "description": "Mid-session toggle works", "file": "tests/test_i18n.py::test_mid_session_switch" }]
+            },
+            {
+              "id": "mt-12.2.4",
+              "name": "Test language + city toggle combination",
+              "tests": [{ "type": "e2e", "description": "Both toggles work together", "file": "tests/test_i18n.py::test_lang_city_combo" }]
+            }
+          ]
+        },
+        {
+          "id": "task-12.3",
+          "name": "Accessibility testing for i18n",
+          "microtasks": [
+            {
+              "id": "mt-12.3.1",
+              "name": "Verify screen reader announces language changes",
+              "tests": [{ "type": "a11y", "description": "Screen reader test", "file": "tests/test_a11y.py::test_lang_screen_reader" }]
+            },
+            {
+              "id": "mt-12.3.2",
+              "name": "Verify keyboard navigation of language toggle",
+              "tests": [{ "type": "a11y", "description": "Keyboard navigation test", "file": "tests/test_a11y.py::test_lang_keyboard" }]
+            },
+            {
+              "id": "mt-12.3.3",
+              "name": "Verify focus management on language switch",
+              "tests": [{ "type": "a11y", "description": "Focus management test", "file": "tests/test_a11y.py::test_lang_focus" }]
+            }
+          ]
+        }
+      ]
     }
   ],
   "additional_suggestions": [
@@ -670,9 +1150,9 @@
       "id": "suggestion-6",
       "name": "Bilingual support (FR/EN)",
       "description": "Add language toggle for French/English UI",
-      "priority": "medium",
-      "included": false,
-      "reason": "Out of scope for v2, consider for v3"
+      "priority": "high",
+      "included": true,
+      "reason": "Implementing in Phase 10"
     },
     {
       "id": "suggestion-7",
